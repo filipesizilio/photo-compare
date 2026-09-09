@@ -1,10 +1,24 @@
 """
-Testes automatizados para o Photo Compare:
-- Teste de instanciação das janelas e componentes
-- Carregamento de imagens sintéticas
-- Teste de pan e zoom sincronizados e destravados
-- Teste de adição e remoção dinâmica da 3ª coluna
-- Teste de alinhamento com base no painel 1
+================================================================================
+Projeto: Photo Compare
+Descrição: Ferramenta desktop para comparação visual simultânea de imagens lado a
+           lado (2 ou 3 colunas) com suporte a pan e zoom sincronizados ou
+           independentes, arrastar e soltar (Drag & Drop) nativo do Windows e
+           renderização de alto desempenho via Pillow.
+
+Arquivo: test_app.py
+Função do Script:
+    Suíte de testes automatizados para validação completa do Photo Compare.
+    Testa inicialização com 2 colunas, carregamento de imagens sintéticas,
+    pan e zoom sincronizados e destravados, abertura e fechamento da 3ª coluna,
+    alinhamento ao painel 1, fechamento de imagens, carregamento em lote com
+    regras de distribuição (1, 2 e 3 imagens) e auto-abertura da 3ª coluna.
+
+Funções Globais:
+    - create_dummy_image(path, width, height, color, label): Cria imagens de teste
+      sintéticas em disco com dimensões e cores personalizadas.
+    - run_tests(): Executa os 14 testes automatizados de regressão e validação.
+================================================================================
 """
 
 import os

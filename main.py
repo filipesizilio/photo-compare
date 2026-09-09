@@ -1,13 +1,40 @@
 """
-Photo Compare - Ferramenta de comparação de imagens lado a lado com Tkinter e Pillow.
-Permite comparar 2 ou 3 imagens simultaneamente com pan e zoom sincronizados.
+================================================================================
+Projeto: Photo Compare
+Descrição: Ferramenta desktop para comparação visual simultânea de imagens lado a
+           lado (2 ou 3 colunas) com suporte a pan e zoom sincronizados ou
+           independentes, arrastar e soltar (Drag & Drop) nativo do Windows e
+           renderização de alto desempenho via Pillow.
+
+Arquivo: main.py
+Função do Script:
+    Ponto de entrada principal da aplicação. Gerencia a janela principal
+    (PhotoCompareApp), barra de ferramentas, atalhos de teclado, persistência
+    de geometria e estado da janela entre sessões, abertura maximizada por
+    padrão, controle da 3ª coluna, sincronização de eventos de pan e zoom, e
+    recepção de arquivos via Drag & Drop.
+
+Funções Globais:
+    - resource_path(relative_path): Retorna o caminho absoluto de um recurso,
+      compatível tanto com a execução em desenvolvimento quanto empacotado em .exe.
+    - get_config_path(): Retorna o caminho do arquivo de configuração JSON para
+      salvar e restaurar tamanho, posição e estado maximizado da janela.
+    - main(): Inicializa e executa a aplicação PhotoCompareApp.
+================================================================================
 """
 
+import json
 import os
 import sys
 import webbrowser
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+try:
+    import tkinterdnd2 as tkdnd
+    TKDND_AVAILABLE = True
+except ImportError:
+    tkdnd = tk
+    TKDND_AVAILABLE = False
 from image_viewer import ImageViewer
 from drag_drop import is_image_file, enable_drag_drop
 
@@ -21,16 +48,32 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
-class PhotoCompareApp(tk.Tk):
+def get_config_path():
+    """Retorna o caminho para o arquivo de configuração JSON de preferências da janela."""
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        base_dir = os.path.join(appdata, "PhotoCompare")
+    else:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+    os.makedirs(base_dir, exist_ok=True)
+    return os.path.join(base_dir, "config.json")
+
+
+class PhotoCompareApp(tkdnd.Tk if TKDND_AVAILABLE else tk.Tk):
     """Janela principal da aplicação Photo Compare."""
 
     def __init__(self):
         super().__init__()
 
         self.title("Photo Compare - Comparador de Imagens")
-        self.geometry("1280x760")
         self.minsize(800, 500)
         self.configure(bg="#0f0f11")
+
+        self._config_path = get_config_path()
+        self._last_normal_geometry = None
+
+        # Carrega tamanho/posição salvos e abre maximizado por padrão
+        self._load_and_apply_geometry()
 
         self._set_app_icon()
 
@@ -41,6 +84,61 @@ class PhotoCompareApp(tk.Tk):
         self._init_style()
         self._build_ui()
         self._bind_global_shortcuts()
+
+        # Monitora redimensionamento e fechamento para persistência
+        self.bind("<Configure>", self._on_window_configure)
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    def _load_and_apply_geometry(self):
+        """Restaura a geometria e o estado da janela salvo ou inicia maximizado por padrão."""
+        config = {}
+        if os.path.exists(self._config_path):
+            try:
+                with open(self._config_path, "r", encoding="utf-8") as f:
+                    config = json.load(f)
+            except Exception:
+                config = {}
+
+        # Aplica geometria da sessão anterior se existir
+        geom = config.get("geometry", "1280x760")
+        try:
+            self.geometry(geom)
+            self._last_normal_geometry = geom
+        except Exception:
+            self.geometry("1280x760")
+
+        # Abre maximizado por padrão (ou restaura estado maximizado salvo)
+        should_maximize = config.get("maximized", True)
+        if should_maximize:
+            try:
+                self.state("zoomed")
+            except Exception:
+                pass
+
+    def _on_window_configure(self, event):
+        """Registra a geometria normal sempre que a janela não estiver maximizada."""
+        if event.widget == self:
+            try:
+                if self.state() != "zoomed":
+                    self._last_normal_geometry = self.geometry()
+            except Exception:
+                pass
+
+    def _on_close(self):
+        """Salva a geometria e o estado maximizado da janela antes de fechar."""
+        try:
+            is_maximized = (self.state() == "zoomed")
+            geom = self._last_normal_geometry or self.geometry()
+            config_data = {
+                "maximized": is_maximized,
+                "geometry": geom
+            }
+            with open(self._config_path, "w", encoding="utf-8") as f:
+                json.dump(config_data, f, indent=2)
+        except Exception as err:
+            print(f"Erro ao salvar configurações de janela: {err}")
+
+        self.destroy()
 
     def _init_style(self):
         """Configurações visuais do ttk para combinar com o tema escuro."""
@@ -86,12 +184,13 @@ class PhotoCompareApp(tk.Tk):
         sep1 = tk.Frame(self.toolbar, bg="#27272a", width=1, height=28)
         sep1.pack(side=tk.LEFT, padx=(0, 16), fill=tk.Y, pady=4)
 
-        # Botão de Trava de Sincronização (Destaque Principal)
+        # Botão de Trava de Sincronização: apenas o símbolo de cadeado "🔒"
         self.btn_sync = tk.Button(
             self.toolbar,
+            text="🔒",
             font=("Segoe UI", 10, "bold"),
             relief=tk.FLAT,
-            padx=12,
+            width=3,
             pady=4,
             cursor="hand2",
             command=self.toggle_sync
@@ -173,7 +272,7 @@ class PhotoCompareApp(tk.Tk):
         # Dica rápida no lado direito
         lbl_hint = tk.Label(
             self.toolbar,
-            text="Atalho: [Espaço] para Travar/Destravar • [F] Ajustar",
+            text="Atalho: [Espaço] Sincronizar • [F] Ajustar • Arraste arquivos aqui",
             font=("Segoe UI", 9),
             fg="#71717a",
             bg="#18181b"
@@ -417,10 +516,10 @@ class PhotoCompareApp(tk.Tk):
         self._update_sync_button_style()
 
     def _update_sync_button_style(self):
-        """Atualiza a aparência do botão de trava de sincronização."""
+        """Atualiza a aparência do botão de trava de sincronização (símbolo 🔒 ou 🔓)."""
         if self.sync_locked:
             self.btn_sync.config(
-                text="🔒 Sincronização: TRAVADA (Ativa)",
+                text="🔒",
                 bg="#16a34a",
                 fg="white",
                 activebackground="#15803d",
@@ -428,11 +527,11 @@ class PhotoCompareApp(tk.Tk):
             )
             if hasattr(self, "lbl_status"):
                 self.lbl_status.config(
-                    text="Sincronização ativada: pan e zoom aplicados em uma imagem moverão as outras."
+                    text="Sincronização ativada (🔒): pan e zoom aplicados em uma imagem moverão as outras."
                 )
         else:
             self.btn_sync.config(
-                text="🔓 Sincronização: DESTRAVADA",
+                text="🔓",
                 bg="#4b5563",
                 fg="#f4f4f5",
                 activebackground="#374151",
@@ -440,7 +539,7 @@ class PhotoCompareApp(tk.Tk):
             )
             if hasattr(self, "lbl_status"):
                 self.lbl_status.config(
-                    text="Sincronização destravada: ajuste cada imagem individualmente para alinhamento."
+                    text="Sincronização destravada (🔓): ajuste cada imagem individualmente para alinhamento."
                 )
 
     def toggle_third_column(self):
@@ -453,7 +552,6 @@ class PhotoCompareApp(tk.Tk):
                 activebackground="#991b1b"
             )
             self._arrange_columns()
-            # Se a sincronização estiver ativa e já houver imagem no painel 1, tenta ajustar
             if self.sync_locked and self.viewer1.pil_image and self.viewer3.pil_image:
                 self.align_to_first_panel()
         else:
@@ -507,7 +605,7 @@ class PhotoCompareApp(tk.Tk):
     def align_to_first_panel(self):
         """
         Alinha a escala e a posição das outras colunas com base no Painel 1.
-        Muito útil para quando imagens de resoluções semelhantes precisam de alinhamento perfeito imediato.
+        Útil para imagens de resoluções semelhantes precisando de alinhamento imediato.
         """
         ref = self.viewer1
         if not ref.pil_image:
@@ -519,7 +617,6 @@ class PhotoCompareApp(tk.Tk):
 
         ref_cw = max(1, ref.canvas.winfo_width())
         ref_ch = max(1, ref.canvas.winfo_height())
-        # Centro do viewport atual na imagem de referência (coordenadas da imagem)
         center_img_x = (ref_cw / 2.0 - ref.offset_x) / ref.scale
         center_img_y = (ref_ch / 2.0 - ref.offset_y) / ref.scale
 
@@ -528,7 +625,6 @@ class PhotoCompareApp(tk.Tk):
                 tgt_cw = max(1, viewer.canvas.winfo_width())
                 tgt_ch = max(1, viewer.canvas.winfo_height())
 
-                # Adota a mesma escala do painel de referência
                 viewer.scale = ref.scale
                 viewer.offset_x = tgt_cw / 2.0 - center_img_x * viewer.scale
                 viewer.offset_y = tgt_ch / 2.0 - center_img_y * viewer.scale
@@ -538,6 +634,7 @@ class PhotoCompareApp(tk.Tk):
 
 
 def main():
+    """Função de entrada para iniciar o Photo Compare."""
     app = PhotoCompareApp()
     app.mainloop()
 

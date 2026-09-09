@@ -1,21 +1,38 @@
 """
-Módulo de suporte a Arraste e Solte (Drag & Drop) nativo no Windows para Tkinter.
-Utiliza a API Win32 (shell32 e user32 via ctypes) sem dependências externas compiladas.
+================================================================================
+Projeto: Photo Compare
+Descrição: Ferramenta desktop para comparação visual simultânea de imagens lado a
+           lado (2 ou 3 colunas) com suporte a pan e zoom sincronizados ou
+           independentes, arrastar e soltar (Drag & Drop) nativo do Windows e
+           renderização de alto desempenho via Pillow.
+
+Arquivo: drag_drop.py
+Função do Script:
+    Módulo de integração com Drag & Drop nativo do Windows para janelas Tkinter.
+
+    Utiliza a biblioteca `tkinterdnd2` que fornece suporte nativo a Drag & Drop
+    para Tkinter via Tcl/Tk extension, evitando problemas de GIL e threading
+    que afetam abordagens baseadas em windnd ou Win32 API direta.
+
+    Como fallback (plataformas não-Windows ou tkinterdnd2 indisponível), a função
+    retorna False sem gerar exceção.
+
+Funções Globais:
+    - is_image_file(path): Verifica se o caminho corresponde a um arquivo de imagem
+      com formato suportado (JPG, JPEG, PNG, WEBP, BMP, TIFF, TIF, GIF, ICO).
+    - enable_drag_drop(tk_widget, callback): Registra o widget Tkinter para aceitar
+      arquivos arrastados. O callback é chamado com assinatura:
+          callback(files_list: list[str], drop_x: int|None, drop_y: int|None)
+================================================================================
 """
 
 import os
 import platform
-import sys
-import ctypes
-from ctypes import wintypes
 
 VALID_EXTENSIONS = {
     ".jpg", ".jpeg", ".png", ".webp", ".bmp",
     ".tiff", ".tif", ".gif", ".ico"
 }
-
-# Referência global para evitar coleta de lixo dos ponteiros WNDPROC
-_registered_hooks = {}
 
 
 def is_image_file(path):
@@ -27,132 +44,69 @@ def is_image_file(path):
 def enable_drag_drop(tk_widget, callback):
     """
     Habilita o recebimento de arquivos arrastados do Windows Explorer para o widget Tkinter.
-    
-    :param tk_widget: Instância de tk.Tk, tk.Toplevel, tk.Frame ou tk.Canvas
-    :param callback: Função chamada com assinatura (files_list, drop_x, drop_y)
+
+    Usa tkinterdnd2 que integra nativamente com o event loop do Tkinter.
+    O callback é chamado na thread principal do Tkinter com as coordenadas do drop.
+
+    :param tk_widget: Instância de tk.Tk, tk.Toplevel ou qualquer widget Tkinter.
+    :param callback:  Função chamada com assinatura (files_list, drop_x, drop_y).
+    :returns: True se o suporte foi ativado, False caso contrário.
     """
     if platform.system() != "Windows":
         return False
 
-    tk_widget.update_idletasks()
-    hwnd = tk_widget.winfo_id()
+    try:
+        import tkinterdnd2 as tkdnd
 
-    # Tipos e constantes Win32
-    WM_DROPFILES = 0x0233
-    GWLP_WNDPROC = -4
+        # Verifica se o widget já tem suporte a DnD (tkdnd.Tk ou tkdnd.Toplevel)
+        # Se não, tenta registrar o widget para DnD
+        if not hasattr(tk_widget, 'drop_target_register'):
+            # Tenta obter a instância raiz tkdnd
+            root = tk_widget.winfo_toplevel()
+            if not hasattr(root, 'drop_target_register'):
+                # A raiz não é um tkdnd.Tk, não podemos habilitar DnD facilmente
+                # sem recriar a janela como tkdnd.Tk
+                print("[drag_drop] Aviso: janela principal não é tkdnd.Tk, Drag & Drop limitado.")
+                return False
+            tk_widget = root
 
-    is_64bit = platform.architecture()[0] == "64bit"
-
-    if is_64bit:
-        SetWindowLongPtr = ctypes.windll.user32.SetWindowLongPtrW
-        SetWindowLongPtr.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_void_p]
-        SetWindowLongPtr.restype = ctypes.c_void_p
-
-        GetWindowLongPtr = ctypes.windll.user32.GetWindowLongPtrW
-        GetWindowLongPtr.argtypes = [wintypes.HWND, ctypes.c_int]
-        GetWindowLongPtr.restype = ctypes.c_void_p
-
-        WNDPROC = ctypes.WINFUNCTYPE(
-            ctypes.c_ssize_t,
-            wintypes.HWND,
-            wintypes.UINT,
-            wintypes.WPARAM,
-            wintypes.LPARAM
-        )
-    else:
-        SetWindowLongPtr = ctypes.windll.user32.SetWindowLongW
-        SetWindowLongPtr.argtypes = [wintypes.HWND, ctypes.c_int, wintypes.LONG]
-        SetWindowLongPtr.restype = wintypes.LONG
-
-        GetWindowLongPtr = ctypes.windll.user32.GetWindowLongW
-        GetWindowLongPtr.argtypes = [wintypes.HWND, ctypes.c_int]
-        GetWindowLongPtr.restype = wintypes.LONG
-
-        WNDPROC = ctypes.WINFUNCTYPE(
-            wintypes.LPARAM,
-            wintypes.HWND,
-            wintypes.UINT,
-            wintypes.WPARAM,
-            wintypes.LPARAM
-        )
-
-    CallWindowProc = ctypes.windll.user32.CallWindowProcW
-    CallWindowProc.restype = ctypes.c_ssize_t if is_64bit else wintypes.LPARAM
-
-    DragQueryFileW = ctypes.windll.shell32.DragQueryFileW
-    DragQueryFileW.restype = wintypes.UINT
-    DragQueryFileW.argtypes = [wintypes.HANDLE, wintypes.UINT, wintypes.LPWSTR, wintypes.UINT]
-
-    DragQueryPoint = ctypes.windll.shell32.DragQueryPoint
-    DragQueryPoint.restype = wintypes.BOOL
-    DragQueryPoint.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.POINT)]
-
-    DragFinish = ctypes.windll.shell32.DragFinish
-    DragFinish.restype = None
-    DragFinish.argtypes = [wintypes.HANDLE]
-
-    DragAcceptFiles = ctypes.windll.shell32.DragAcceptFiles
-    DragAcceptFiles.restype = None
-    DragAcceptFiles.argtypes = [wintypes.HWND, wintypes.BOOL]
-
-    # Ativa aceitação de arquivos na janela
-    DragAcceptFiles(hwnd, True)
-
-    old_wndproc = GetWindowLongPtr(hwnd, GWLP_WNDPROC)
-
-    def wndproc(h, msg, wp, lp):
-        if msg == WM_DROPFILES:
-            hDrop = wintypes.HANDLE(wp)
-
-            # Extrai coordenadas do drop
-            pt = wintypes.POINT()
-            has_pt = DragQueryPoint(hDrop, ctypes.byref(pt))
-            drop_x = pt.x if has_pt else None
-            drop_y = pt.y if has_pt else None
-
-            # Extrai os caminhos dos arquivos com suporte completo a Unicode
-            count = DragQueryFileW(hDrop, 0xFFFFFFFF, None, 0)
-            file_paths = []
-            for i in range(count):
-                length = DragQueryFileW(hDrop, i, None, 0)
-                buf = ctypes.create_unicode_buffer(length + 1)
-                DragQueryFileW(hDrop, i, buf, length + 1)
-                file_paths.append(buf.value)
-
-            DragFinish(hDrop)
-
-            if callback:
-                try:
-                    callback(file_paths, drop_x, drop_y)
-                except Exception as err:
-                    print(f"Erro no callback de Drag & Drop: {err}")
-
-            return 0
-
-        return CallWindowProc(ctypes.c_void_p(old_wndproc), h, msg, wp, lp)
-
-    proc_ref = WNDPROC(wndproc)
-    SetWindowLongPtr(hwnd, GWLP_WNDPROC, ctypes.cast(proc_ref, ctypes.c_void_p).value)
-
-    # Armazena referências para prevenir descarte pelo garbage collector
-    _registered_hooks[hwnd] = {
-        "proc": proc_ref,
-        "old_wndproc": old_wndproc,
-        "hwnd": hwnd,
-        "SetWindowLongPtr": SetWindowLongPtr,
-        "DragAcceptFiles": DragAcceptFiles
-    }
-
-    # Desvincula quando o widget for destruído
-    def _cleanup(event=None):
-        if hwnd in _registered_hooks:
-            info = _registered_hooks.pop(hwnd)
+        def _on_drop(event):
+            """Callback para evento de drop do tkinterdnd2."""
             try:
-                info["SetWindowLongPtr"](hwnd, GWLP_WNDPROC, info["old_wndproc"])
-                info["DragAcceptFiles"](hwnd, False)
-            except Exception:
-                pass
+                # event.data contém a lista de arquivos como string Tcl
+                # Formato: {arquivo1} {arquivo2} ... ou arquivo1 arquivo2 ...
+                data = event.data
+                if not data:
+                    return
 
-    tk_widget.bind("<Destroy>", _cleanup, add="+")
-    return True
+                # Parse dos arquivos (tkinterdnd2 retorna string com caminhos)
+                # Remove chaves Tcl e divide por espaços, respeitando aspas
+                import shlex
+                try:
+                    file_list = shlex.split(data.replace('{', '').replace('}', ''))
+                except ValueError:
+                    # Fallback simples
+                    file_list = data.split()
 
+                # Filtra apenas arquivos de imagem
+                image_files = [f for f in file_list if isinstance(f, str) and is_image_file(f)]
+                if image_files and callback:
+                    # Coordenadas do drop relativas ao widget
+                    drop_x = event.x_root - tk_widget.winfo_rootx()
+                    drop_y = event.y_root - tk_widget.winfo_rooty()
+                    callback(image_files, drop_x, drop_y)
+            except Exception as err:
+                print(f"Erro no callback de Drag & Drop: {err}")
+
+        # Registra o widget como target de drop
+        tk_widget.drop_target_register(tkdnd.DND_FILES)
+        tk_widget.dnd_bind('<<Drop>>', _on_drop)
+
+        return True
+
+    except ImportError:
+        print("[drag_drop] Aviso: tkinterdnd2 não instalado. Drag & Drop desativado.")
+        return False
+    except Exception as err:
+        print(f"[drag_drop] Aviso: falha ao inicializar Drag & Drop ({err}).")
+        return False

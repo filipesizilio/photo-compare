@@ -1,13 +1,31 @@
 """
-Componente ImageViewer para visualização e comparação de imagens com suporte a
-pan, zoom acelerado por recorte de viewport e callbacks de sincronização.
+================================================================================
+Projeto: Photo Compare
+Descrição: Ferramenta desktop para comparação visual simultânea de imagens lado a
+           lado (2 ou 3 colunas) com suporte a pan e zoom sincronizados ou
+           independentes, arrastar e soltar (Drag & Drop) nativo do Windows e
+           renderização de alto desempenho via Pillow.
+
+Arquivo: image_viewer.py
+Função do Script:
+    Implementa o widget ImageViewer baseado em tk.Frame e tk.Canvas.
+    Gerencia a exibição individual de cada imagem, cálculos matemáticos de zoom
+    ancorado na posição do cursor, movimentação (pan), renderização otimizada
+    por recorte de viewport visível, sobreposição de legenda com metadados em
+    caixa semitransparente (50% preto fumê), exibição do percentual de zoom no
+    título da coluna e botões de controle de tamanho padronizado.
+
+Funções Globais:
+    - Nenhuma (módulo orientado a objetos centrado na classe ImageViewer).
+================================================================================
 """
 
 import math
 import os
 import tkinter as tk
+from datetime import datetime
 from tkinter import filedialog, messagebox
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw, ImageFont
 
 
 class ImageViewer(tk.Frame):
@@ -17,6 +35,8 @@ class ImageViewer(tk.Frame):
     - Pan via arraste do mouse
     - Renderização otimizada com recorte do viewport
     - Sincronização via callbacks
+    - Legenda sobreposta em caixa semitransparente (50% preto)
+    - Botão 'X' no canto superior direito para fechar a imagem
     """
 
     MIN_SCALE = 0.01  # 1%
@@ -43,6 +63,7 @@ class ImageViewer(tk.Frame):
         self.file_path = None
         self.pil_image = None
         self.tk_image = None
+        self.tk_legend = None
         self.orig_size = (0, 0)  # (largura, altura)
 
         # Estado da visualização
@@ -60,11 +81,11 @@ class ImageViewer(tk.Frame):
 
     def _build_ui(self):
         # Barra superior do painel
-        self.header = tk.Frame(self, bg="#27272a", height=42, padx=8, pady=4)
+        self.header = tk.Frame(self, bg="#27272a", height=38, padx=6, pady=3)
         self.header.pack(fill=tk.X, side=tk.TOP)
         self.header.pack_propagate(False)
 
-        # Título da coluna
+        # Título da coluna (exibe título e nível de zoom)
         self.lbl_title = tk.Label(
             self.header,
             text=self.title,
@@ -72,87 +93,76 @@ class ImageViewer(tk.Frame):
             fg="#60a5fa",
             bg="#27272a"
         )
-        self.lbl_title.pack(side=tk.LEFT, padx=(0, 8))
+        self.lbl_title.pack(side=tk.LEFT, padx=(0, 6))
 
-        # Botão Abrir
+        # Botão Abrir - texto "📂", tamanho padronizado (width=3)
         self.btn_open = tk.Button(
             self.header,
-            text="📂 Abrir Imagem",
+            text="📂",
             font=("Segoe UI", 9, "bold"),
             bg="#2563eb",
             fg="white",
             activebackground="#1d4ed8",
             activeforeground="white",
             relief=tk.FLAT,
-            padx=10,
-            pady=2,
+            width=3,
+            pady=1,
             cursor="hand2",
             command=self.open_file_dialog
         )
-        self.btn_open.pack(side=tk.LEFT, padx=4)
+        self.btn_open.pack(side=tk.LEFT, padx=2)
 
-        # Botão Ajustar à Tela
+        # Botão Ajustar à Tela - texto "⤢", tamanho padronizado (width=3)
         self.btn_fit = tk.Button(
             self.header,
-            text="⤢ Ajustar",
-            font=("Segoe UI", 9),
+            text="⤢",
+            font=("Segoe UI", 9, "bold"),
             bg="#3f3f46",
             fg="#f4f4f5",
             activebackground="#52525b",
             activeforeground="white",
             relief=tk.FLAT,
-            padx=6,
-            pady=2,
+            width=3,
+            pady=1,
             cursor="hand2",
             command=self.fit_to_window
         )
-        self.btn_fit.pack(side=tk.LEFT, padx=3)
+        self.btn_fit.pack(side=tk.LEFT, padx=2)
 
-        # Botão 100%
+        # Botão 1:1 - texto "1:1", tamanho padronizado (width=3)
         self.btn_100 = tk.Button(
             self.header,
             text="1:1",
-            font=("Segoe UI", 9),
+            font=("Segoe UI", 9, "bold"),
             bg="#3f3f46",
             fg="#f4f4f5",
             activebackground="#52525b",
             activeforeground="white",
             relief=tk.FLAT,
-            padx=6,
-            pady=2,
+            width=3,
+            pady=1,
             cursor="hand2",
             command=self.reset_100
         )
-        self.btn_100.pack(side=tk.LEFT, padx=3)
+        self.btn_100.pack(side=tk.LEFT, padx=2)
 
-        # Botão Fechar Imagem (oculto quando vazio)
+        # Botão Fechar Imagem ("X") no canto superior direito da coluna, tamanho padronizado (width=3)
         self.btn_close = tk.Button(
             self.header,
-            text="✕ Limpar",
-            font=("Segoe UI", 9),
-            bg="#dc2626",
+            text="✕",
+            font=("Segoe UI", 9, "bold"),
+            bg="#7f1d1d",
             fg="white",
-            activebackground="#b91c1c",
+            activebackground="#991b1b",
             activeforeground="white",
             relief=tk.FLAT,
-            padx=6,
-            pady=2,
+            width=3,
+            pady=1,
             cursor="hand2",
             command=self.close_image
         )
 
-        # Rótulo de informações (nome do arquivo, resolução, zoom)
-        self.lbl_info = tk.Label(
-            self.header,
-            text="Nenhuma imagem carregada",
-            font=("Segoe UI", 9),
-            fg="#a1a1aa",
-            bg="#27272a",
-            anchor="e"
-        )
-        self.lbl_info.pack(side=tk.RIGHT, padx=(4, 0))
-
-        # Canvas para exibição da imagem
+        # Canvas para exibição da imagem e da legenda sobreposta
         self.canvas = tk.Canvas(
             self,
             bg="#18181b",
@@ -220,7 +230,8 @@ class ImageViewer(tk.Frame):
             self.orig_size = img.size
 
             self.canvas.config(cursor="fleur")
-            self.btn_close.pack(side=tk.LEFT, padx=3)
+            # Exibe o botão de fechar "X" no canto superior direito da coluna
+            self.btn_close.pack(side=tk.RIGHT, padx=4)
 
             # Ajusta imagem inicialmente à tela
             self.fit_to_window()
@@ -231,16 +242,18 @@ class ImageViewer(tk.Frame):
             )
 
     def close_image(self):
-        """Fecha e descarrega a imagem atual."""
+        """Fecha e descarrega a imagem atual da coluna."""
         self.file_path = None
         self.pil_image = None
         self.tk_image = None
+        self.tk_legend = None
         self.orig_size = (0, 0)
         self.scale = 1.0
         self.offset_x = 0.0
         self.offset_y = 0.0
 
         self.btn_close.pack_forget()
+        self.lbl_title.config(text=self.title)
         self.canvas.config(cursor="arrow")
         self.render()
 
@@ -324,14 +337,14 @@ class ImageViewer(tk.Frame):
 
     def render(self):
         """
-        Renderiza a imagem no Canvas com recorte inteligente do viewport.
-        Garante alta taxa de quadros (60 FPS) mesmo para imagens de 50MP+.
+        Renderiza a imagem no Canvas com recorte inteligente do viewport,
+        desenha a legenda semitransparente sobre a imagem e atualiza o zoom no título.
         """
         self.canvas.delete("all")
 
         if not self.pil_image:
             self._draw_empty_state()
-            self._update_info_label()
+            self._update_title_zoom()
             return
 
         cw = self.canvas.winfo_width()
@@ -354,48 +367,139 @@ class ImageViewer(tk.Frame):
         crop_r = min(float(iw), right)
         crop_b = min(float(ih), bottom)
 
-        if crop_r <= crop_l or crop_b <= crop_t:
-            # Imagem fora da área visível
-            self._update_info_label()
-            return
+        if crop_r > crop_l and crop_b > crop_t:
+            # Posição e dimensões de destino no canvas
+            dst_x = int(round(self.offset_x + crop_l * self.scale))
+            dst_y = int(round(self.offset_y + crop_t * self.scale))
+            dst_w = int(round((crop_r - crop_l) * self.scale))
+            dst_h = int(round((crop_b - crop_t) * self.scale))
 
-        # Posição e dimensões de destino no canvas
-        dst_x = int(round(self.offset_x + crop_l * self.scale))
-        dst_y = int(round(self.offset_y + crop_t * self.scale))
-        dst_w = int(round((crop_r - crop_l) * self.scale))
-        dst_h = int(round((crop_b - crop_t) * self.scale))
+            if dst_w > 0 and dst_h > 0:
+                crop_box = (
+                    int(math.floor(crop_l)),
+                    int(math.floor(crop_t)),
+                    min(iw, int(math.ceil(crop_r))),
+                    min(ih, int(math.ceil(crop_b))),
+                )
+                try:
+                    sub_img = self.pil_image.crop(crop_box)
+                    resample_mode = (
+                        Image.Resampling.NEAREST
+                        if self.scale >= 4.0
+                        else Image.Resampling.BILINEAR
+                    )
+                    resized = sub_img.resize((dst_w, dst_h), resample_mode)
+                    self.tk_image = ImageTk.PhotoImage(resized)
+                    self.canvas.create_image(dst_x, dst_y, anchor="nw", image=self.tk_image)
+                except Exception:
+                    pass
 
-        if dst_w <= 0 or dst_h <= 0:
-            self._update_info_label()
-            return
+        # Desenha a legenda de metadados sobreposta no canto inferior esquerdo
+        self._draw_overlay_legend(cw, ch)
 
-        # Caixa de corte inteira para a Pillow
-        crop_box = (
-            int(math.floor(crop_l)),
-            int(math.floor(crop_t)),
-            min(iw, int(math.ceil(crop_r))),
-            min(ih, int(math.ceil(crop_b))),
-        )
+        # Atualiza nível de zoom no título da coluna
+        self._update_title_zoom()
 
+    def _get_image_date(self):
+        """Obtém a data da imagem a partir dos metadados EXIF ou da data de modificação."""
+        if not self.file_path or not os.path.exists(self.file_path):
+            return ""
+
+        # 1. Tenta extrair DateTimeOriginal ou DateTime do EXIF
         try:
-            sub_img = self.pil_image.crop(crop_box)
-
-            # Quando ampliado além de 4x (400%), usamos NEAREST para permitir visualização de pixels
-            # Para zooms normais, usamos BILINEAR para máxima suavidade e velocidade
-            resample_mode = (
-                Image.Resampling.NEAREST
-                if self.scale >= 4.0
-                else Image.Resampling.BILINEAR
-            )
-            resized = sub_img.resize((dst_w, dst_h), resample_mode)
-
-            self.tk_image = ImageTk.PhotoImage(resized)
-            self.canvas.create_image(dst_x, dst_y, anchor="nw", image=self.tk_image)
-        except Exception as e:
-            # Em caso de falha de renderização momentânea (ex: redimensionamento extremo)
+            if self.pil_image:
+                exif = getattr(self.pil_image, "getexif", lambda: None)()
+                if exif:
+                    # 36867: DateTimeOriginal, 306: DateTime
+                    exif_date = exif.get(36867) or exif.get(306)
+                    if exif_date and isinstance(exif_date, str):
+                        parts = exif_date.strip().split(" ")
+                        if len(parts) == 2:
+                            d_parts = parts[0].split(":")
+                            if len(d_parts) == 3:
+                                return f"{d_parts[2]}/{d_parts[1]}/{d_parts[0]} {parts[1][:5]}"
+        except Exception:
             pass
 
-        self._update_info_label()
+        # 2. Fallback para data de modificação do arquivo no disco
+        try:
+            mtime = os.path.getmtime(self.file_path)
+            return datetime.fromtimestamp(mtime).strftime("%d/%m/%Y %H:%M")
+        except Exception:
+            return ""
+
+    def _draw_overlay_legend(self, cw, ch):
+        """
+        Desenha a caixa de legenda semitransparente (preto fumê 50%)
+        no canto inferior esquerdo com caminho do arquivo, resolução, MP e data.
+        """
+        if not self.file_path or not self.pil_image:
+            return
+
+        iw, ih = self.orig_size
+        mp = (iw * ih) / 1_000_000.0
+        date_str = self._get_image_date()
+
+        line1 = self.file_path
+        line2 = f"{mp:.1f} MP ({iw}x{ih})"
+        if date_str:
+            line2 += f"   •   {date_str}"
+
+        # Carrega fontes com fallback para fonte padrão
+        try:
+            font_title = ImageFont.truetype("segoeuib.ttf", 11)
+            font_sub = ImageFont.truetype("segoeui.ttf", 11)
+        except Exception:
+            try:
+                font_title = ImageFont.truetype("segoeui.ttf", 11)
+                font_sub = font_title
+            except Exception:
+                font_title = ImageFont.load_default()
+                font_sub = font_title
+
+        def measure(text, font):
+            try:
+                bbox = font.getbbox(text)
+                return bbox[2] - bbox[0], bbox[3] - bbox[1]
+            except Exception:
+                return len(text) * 7, 14
+
+        w1, h1 = measure(line1, font_title)
+        w2, h2 = measure(line2, font_sub)
+
+        # Ajusta comprimento do caminho se for maior que a largura do canvas
+        max_line_w = max(160, cw - 40)
+        if w1 > max_line_w:
+            while len(line1) > 20 and w1 > max_line_w:
+                line1 = "..." + line1[6:]
+                w1, h1 = measure(line1, font_title)
+
+        box_w = max(w1, w2) + 20
+        box_h = h1 + h2 + 14
+
+        # Fundo preto fumê 50% de opacidade (alfa=128)
+        box = Image.new("RGBA", (box_w, box_h), (0, 0, 0, 128))
+        draw = ImageDraw.Draw(box)
+
+        # Texto branco com alta legibilidade
+        draw.text((10, 4), line1, font=font_title, fill=(255, 255, 255, 255))
+        draw.text((10, 6 + h1 + 2), line2, font=font_sub, fill=(235, 235, 235, 225))
+
+        self.tk_legend = ImageTk.PhotoImage(box)
+        pos_x = 10
+        pos_y = max(10, ch - box_h - 10)
+
+        self.canvas.create_image(
+            pos_x, pos_y, anchor="nw", image=self.tk_legend, tags="legend"
+        )
+
+        # Permite arrastar sobre a área da legenda.
+        # Nota: <MouseWheel> não é permitido em itens de canvas (apenas no canvas em si),
+        # mas o scroll já está vinculado corretamente ao canvas em _bind_events().
+        self.canvas.tag_bind("legend", "<ButtonPress-1>", self._on_button_press)
+        self.canvas.tag_bind("legend", "<B1-Motion>", self._on_mouse_drag)
+        self.canvas.tag_bind("legend", "<ButtonRelease-1>", self._on_button_release)
+        self.canvas.tag_bind("legend", "<Double-Button-1>", lambda e: self.fit_to_window())
 
     def _draw_empty_state(self):
         """Desenha a mensagem de instrução quando nenhuma imagem está carregada."""
@@ -436,21 +540,13 @@ class ImageViewer(tk.Frame):
             tags="empty"
         )
 
-    def _update_info_label(self):
-        """Atualiza o texto de status com nome do arquivo, dimensões e % de zoom."""
+    def _update_title_zoom(self):
+        """Atualiza o nível de zoom exibido no título da coluna."""
         if not self.pil_image:
-            self.lbl_info.config(text="Nenhuma imagem")
-            return
-
-        filename = os.path.basename(self.file_path) if self.file_path else "Imagem"
-        if len(filename) > 24:
-            filename = filename[:21] + "..."
-
-        iw, ih = self.orig_size
-        zoom_pct = int(round(self.scale * 100))
-        self.lbl_info.config(
-            text=f"{filename}  |  {iw}x{ih} px  |  {zoom_pct}%"
-        )
+            self.lbl_title.config(text=self.title)
+        else:
+            zoom_pct = int(round(self.scale * 100))
+            self.lbl_title.config(text=f"{self.title}  •  {zoom_pct}%")
 
     # Handlers de Eventos do Mouse
     def _on_button_press(self, event):
