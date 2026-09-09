@@ -6,6 +6,8 @@ Descrição: Ferramenta desktop para comparação visual simultânea de imagens 
            independentes, arrastar e soltar (Drag & Drop) nativo do Windows e
            renderização de alto desempenho via Pillow.
 
+           
+
 Arquivo: main.py
 Função do Script:
     Ponto de entrada principal da aplicação. Gerencia a janela principal
@@ -173,7 +175,7 @@ class PhotoCompareApp(tkdnd.Tk if TKDND_AVAILABLE else tk.Tk):
         # Logotipo / Nome do App
         lbl_brand = tk.Label(
             self.toolbar,
-            text="🔍 Photo Compare",
+            text="Photo Compare",
             font=("Segoe UI", 12, "bold"),
             fg="#f4f4f5",
             bg="#18181b"
@@ -353,17 +355,24 @@ class PhotoCompareApp(tkdnd.Tk if TKDND_AVAILABLE else tk.Tk):
         self.viewer2.grid_forget()
         self.viewer3.grid_forget()
 
+        # Reseta configuração de colunas para evitar resíduos de uniform group
+        for i in range(3):
+            self.columns_container.columnconfigure(i, weight=0, uniform="")
+
         if not self.third_column_visible:
-            self.columns_container.columnconfigure(0, weight=1, uniform="cols")
-            self.columns_container.columnconfigure(1, weight=1, uniform="cols")
-            self.columns_container.columnconfigure(2, weight=0)
+            # Apenas 2 colunas: dividem o espaço 50/50
+            self.columns_container.columnconfigure(0, weight=1, uniform="cols2")
+            self.columns_container.columnconfigure(1, weight=1, uniform="cols2")
+            # Coluna 2 fica com weight=0 e sem uniform group
+            self.columns_container.columnconfigure(2, weight=0, uniform="")
 
             self.viewer1.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
             self.viewer2.grid(row=0, column=1, sticky="nsew", padx=2, pady=2)
         else:
-            self.columns_container.columnconfigure(0, weight=1, uniform="cols")
-            self.columns_container.columnconfigure(1, weight=1, uniform="cols")
-            self.columns_container.columnconfigure(2, weight=1, uniform="cols")
+            # 3 colunas: dividem o espaço 33/33/33
+            self.columns_container.columnconfigure(0, weight=1, uniform="cols3")
+            self.columns_container.columnconfigure(1, weight=1, uniform="cols3")
+            self.columns_container.columnconfigure(2, weight=1, uniform="cols3")
 
             self.viewer1.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
             self.viewer2.grid(row=0, column=1, sticky="nsew", padx=2, pady=2)
@@ -547,7 +556,7 @@ class PhotoCompareApp(tkdnd.Tk if TKDND_AVAILABLE else tk.Tk):
         self.third_column_visible = not self.third_column_visible
         if self.third_column_visible:
             self.btn_toggle_3rd.config(
-                text="➖ Ocultar 3ª Coluna",
+                text="❌ 3ª Imagem",
                 bg="#7f1d1d",
                 activebackground="#991b1b"
             )
@@ -556,7 +565,7 @@ class PhotoCompareApp(tkdnd.Tk if TKDND_AVAILABLE else tk.Tk):
                 self.align_to_first_panel()
         else:
             self.btn_toggle_3rd.config(
-                text="➕ Adicionar 3ª Imagem",
+                text="➕ 3ª Imagem",
                 bg="#3f3f46",
                 activebackground="#52525b"
             )
