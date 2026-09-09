@@ -74,19 +74,23 @@ def enable_drag_drop(tk_widget, callback):
             """Callback para evento de drop do tkinterdnd2."""
             try:
                 # event.data contém a lista de arquivos como string Tcl
-                # Formato: {arquivo1} {arquivo2} ... ou arquivo1 arquivo2 ...
+                # Formato Tcl list: {arquivo1} {arquivo2} ... ou arquivo1 arquivo2 ...
                 data = event.data
                 if not data:
                     return
 
-                # Parse dos arquivos (tkinterdnd2 retorna string com caminhos)
-                # Remove chaves Tcl e divide por espaços, respeitando aspas
-                import shlex
+                # Parse correto de lista Tcl usando o parser nativo do Tkinter
+                # Isso preserva paths com espaços, acentos e caracteres especiais
                 try:
-                    file_list = shlex.split(data.replace('{', '').replace('}', ''))
-                except ValueError:
-                    # Fallback simples
-                    file_list = data.split()
+                    # tk_widget é a raiz tkdnd.Tk, que tem o interpretador Tcl
+                    file_list = tk_widget.tk.splitlist(data)
+                except Exception:
+                    # Fallback: tenta shlex se splitlist falhar
+                    import shlex
+                    try:
+                        file_list = shlex.split(data)
+                    except ValueError:
+                        file_list = data.split()
 
                 # Filtra apenas arquivos de imagem
                 image_files = [f for f in file_list if isinstance(f, str) and is_image_file(f)]

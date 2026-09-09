@@ -200,7 +200,7 @@ class PhotoCompareApp(tkdnd.Tk if TKDND_AVAILABLE else tk.Tk):
         # Botão para alternar 3ª Coluna
         self.btn_toggle_3rd = tk.Button(
             self.toolbar,
-            text="➕ Adicionar 3ª Imagem",
+            text="➕ 3ª Imagem",
             font=("Segoe UI", 9, "bold"),
             bg="#3f3f46",
             fg="#f4f4f5",
@@ -221,7 +221,7 @@ class PhotoCompareApp(tkdnd.Tk if TKDND_AVAILABLE else tk.Tk):
         # Botão Ajustar Todas
         self.btn_fit_all = tk.Button(
             self.toolbar,
-            text="⤢ Ajustar Todas",
+            text="⤢ Ajustar [Todas]",
             font=("Segoe UI", 9),
             bg="#27272a",
             fg="#e4e4e7",
@@ -238,7 +238,7 @@ class PhotoCompareApp(tkdnd.Tk if TKDND_AVAILABLE else tk.Tk):
         # Botão 100% Todas
         self.btn_reset_all = tk.Button(
             self.toolbar,
-            text="1:1 (Tamanho Real)",
+            text="1:1 [Todas]",
             font=("Segoe UI", 9),
             bg="#27272a",
             fg="#e4e4e7",
@@ -255,7 +255,7 @@ class PhotoCompareApp(tkdnd.Tk if TKDND_AVAILABLE else tk.Tk):
         # Botão Alinhar ao Painel 1
         self.btn_align_panel1 = tk.Button(
             self.toolbar,
-            text="🎯 Alinhar ao Painel 1",
+            text="↙ Alinhar [a Imagem 1]",
             font=("Segoe UI", 9),
             bg="#27272a",
             fg="#e4e4e7",
