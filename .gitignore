@@ -5,3 +5,4 @@ build/
 exemplos/
 dist/
 bkp/
+build.py

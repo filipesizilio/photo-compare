@@ -1,5 +1,11 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+# Definimos as variáveis de identificação do projeto aqui
+NOME_PROJETO = "PhotoCompare"
+VERSAO_PROJETO = "1.0.2"
+
+# Combinamos o nome e a versão para formar o nome final do executável
+NOME_EXECUTAVEL = f"{NOME_PROJETO}_v{VERSAO_PROJETO}"
 
 a = Analysis(
     ['main.py'],
@@ -22,7 +28,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='PhotoCompare',
+    name=NOME_EXECUTAVEL,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -36,5 +42,4 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon=['assets/icon.ico'],
-    version_file='version.txt',
 )
