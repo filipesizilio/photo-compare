@@ -5,6 +5,10 @@ Descrição: Ferramenta desktop para comparação visual simultânea de imagens 
            lado (2 ou 3 colunas) com suporte a pan e zoom sincronizados ou
            independentes, arrastar e soltar (Drag & Drop) nativo do Windows e
            renderização de alto desempenho via Pillow.
+Criado por: Filipe Sizilio
+Data de criação: 01/09/2023
+Versão: 1.0.2
+
 
 Arquivo: image_viewer.py
 Função do Script:
@@ -145,6 +149,23 @@ class ImageViewer(tk.Frame):
             command=self.reset_100
         )
         self.btn_100.pack(side=tk.LEFT, padx=2)
+
+        # Botão Girar 90° - texto "↻", tamanho padronizado (width=3)
+        self.btn_rotate = tk.Button(
+            self.header,
+            text="↻",
+            font=("Segoe UI", 9, "bold"),
+            bg="#3f3f46",
+            fg="#f4f4f5",
+            activebackground="#52525b",
+            activeforeground="white",
+            relief=tk.FLAT,
+            width=3,
+            pady=1,
+            cursor="hand2",
+            command=self.rotate_90
+        )
+        self.btn_rotate.pack(side=tk.LEFT, padx=2)
 
         # Botão Fechar Imagem ("X") no canto superior direito da coluna, tamanho padronizado (width=3)
         self.btn_close = tk.Button(
@@ -292,6 +313,36 @@ class ImageViewer(tk.Frame):
         self.scale = 1.0
         self.offset_x = (cw - iw) / 2.0
         self.offset_y = (ch - ih) / 2.0
+
+        self.render()
+
+    def rotate_90(self):
+        """Gira a imagem 90° no sentido horário, mantendo o centro da visualização."""
+        if not self.pil_image:
+            return
+
+        # Calcula o centro atual da imagem no canvas (em coordenadas do canvas)
+        cw = self.canvas.winfo_width()
+        ch = self.canvas.winfo_height()
+        iw, ih = self.orig_size
+
+        # Centro da imagem no canvas antes da rotação
+        center_x = self.offset_x + (iw * self.scale) / 2.0
+        center_y = self.offset_y + (ih * self.scale) / 2.0
+
+        # Rotaciona a imagem PIL 90° no sentido horário
+        # Image.Transpose.ROTATE_90 gira no sentido anti-horário, então usamos ROTATE_270
+        # ou podemos usar transpose com ROTATE_90 e depois flip horizontal
+        # Mais simples: ROTATE_270 = 90° horário
+        self.pil_image = self.pil_image.transpose(Image.Transpose.ROTATE_270)
+        self.orig_size = self.pil_image.size  # (nova_largura, nova_altura)
+
+        # Nova largura/altura após rotação
+        new_iw, new_ih = self.orig_size
+
+        # Ajusta offset para manter o mesmo centro da imagem no canvas
+        self.offset_x = center_x - (new_iw * self.scale) / 2.0
+        self.offset_y = center_y - (new_ih * self.scale) / 2.0
 
         self.render()
 

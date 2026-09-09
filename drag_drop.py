@@ -5,6 +5,10 @@ Descrição: Ferramenta desktop para comparação visual simultânea de imagens 
            lado (2 ou 3 colunas) com suporte a pan e zoom sincronizados ou
            independentes, arrastar e soltar (Drag & Drop) nativo do Windows e
            renderização de alto desempenho via Pillow.
+Criado por: Filipe Sizilio
+Data de criação: 01/09/2023
+Versão: 1.0.2
+
 
 Arquivo: drag_drop.py
 Função do Script:

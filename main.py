@@ -5,7 +5,9 @@ Descrição: Ferramenta desktop para comparação visual simultânea de imagens 
            lado (2 ou 3 colunas) com suporte a pan e zoom sincronizados ou
            independentes, arrastar e soltar (Drag & Drop) nativo do Windows e
            renderização de alto desempenho via Pillow.
-
+Criado por: Filipe Sizilio
+Data de criação: 01/09/2023
+Versão: 1.0.2
            
 
 Arquivo: main.py
@@ -556,9 +558,9 @@ class PhotoCompareApp(tkdnd.Tk if TKDND_AVAILABLE else tk.Tk):
         self.third_column_visible = not self.third_column_visible
         if self.third_column_visible:
             self.btn_toggle_3rd.config(
-                text="❌ 3ª Imagem",
-                bg="#7f1d1d",
-                activebackground="#991b1b"
+                text="❌  3ª Imagem (ocultar)",
+                bg="#3f3f46",
+                activebackground="#52525b"
             )
             self._arrange_columns()
             if self.sync_locked and self.viewer1.pil_image and self.viewer3.pil_image:
