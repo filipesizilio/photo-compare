@@ -205,7 +205,7 @@ class PhotoCompareApp(tk.Tk):
         self.lbl_github.pack(side=tk.RIGHT)
         self.lbl_github.bind(
             "<Button-1>",
-            lambda e: webbrowser.open("https://github.com/filipe/photo-compare")
+            lambda e: webbrowser.open("https://github.com/filipesizilio/photo-compare")
         )
         self.lbl_github.bind("<Enter>", lambda e: self.lbl_github.config(fg="#93c5fd"))
         self.lbl_github.bind("<Leave>", lambda e: self.lbl_github.config(fg="#60a5fa"))

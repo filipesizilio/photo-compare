@@ -2,5 +2,4 @@ methods/__pycache__/
 __pycache__
 .venv/
 build/
-dist/
 exemplos/

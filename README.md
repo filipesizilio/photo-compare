@@ -2,6 +2,8 @@
 
 Aplicação desktop desenvolvida em **Python** e **Tkinter** para comparação visual lado a lado de imagens de alta resolução, com suporte a **2 ou 3 colunas**, **pan** (arrastar) e **zoom** sincronizados ou independentes.
 
+🔗 **Repositório GitHub**: [https://github.com/filipesizilio/photo-compare](https://github.com/filipesizilio/photo-compare)
+
 ---
 
 ## 🚀 Funcionalidades
