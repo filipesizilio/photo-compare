@@ -9,6 +9,14 @@ Aplicação desktop desenvolvida em **Python** e **Tkinter** para comparação v
 ## 🚀 Funcionalidades
 
 - **2 ou 3 Colunas Dinâmicas**: Inicia com 2 colunas para comparação direta. É possível adicionar ou ocultar uma 3ª coluna a qualquer momento através da barra superior.
+- **📂 Seleção Múltipla Inteligente (Até 3 Imagens)**:
+  - **1 imagem selecionada**: Carrega na janela livre disponível, da esquerda para a direita (ou na coluna clicada).
+  - **2 imagens selecionadas**: Carrega a primeira na **Imagem 1** (esquerda) e a segunda na **Imagem 2** (direita).
+  - **3 imagens selecionadas**: Abre automaticamente a 3ª coluna e distribui as imagens em sequência nas colunas 1, 2 e 3.
+- **🖱️ Arraste e Solte Nativo (Drag & Drop)**:
+  - Arraste arquivos de imagem diretamente do Windows Explorer ou Desktop para a janela do aplicativo.
+  - Solte 1 imagem sobre uma coluna específica para carregá-la diretamente nela.
+  - Solte 2 ou 3 imagens em qualquer lugar da janela para distribuí-las automaticamente.
 - **Navegação com Pan & Zoom**:
   - **Pan**: Clique e arraste com o botão esquerdo do mouse para navegar pela imagem.
   - **Zoom**: Roda do mouse (*mouse scroll wheel*) com ampliação ou redução centrada exatamente onde o cursor do mouse está apontando.

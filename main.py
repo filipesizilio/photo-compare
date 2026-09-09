@@ -7,8 +7,9 @@ import os
 import sys
 import webbrowser
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 from image_viewer import ImageViewer
+from drag_drop import is_image_file, enable_drag_drop
 
 
 def resource_path(relative_path):
@@ -186,7 +187,7 @@ class PhotoCompareApp(tk.Tk):
 
         self.lbl_status = tk.Label(
             self.statusbar,
-            text="Pronto. Abra imagens nas colunas para começar a comparação.",
+            text="Pronto. Selecione até 3 imagens ou arraste arquivos do Windows Explorer para cá.",
             font=("Segoe UI", 8),
             fg="#71717a",
             bg="#18181b"
@@ -222,23 +223,29 @@ class PhotoCompareApp(tk.Tk):
             self.columns_container,
             title="Imagem 1",
             on_pan_callback=self._on_viewer_pan,
-            on_zoom_callback=self._on_viewer_zoom
+            on_zoom_callback=self._on_viewer_zoom,
+            on_open_request_callback=self.open_images_dialog
         )
         self.viewer2 = ImageViewer(
             self.columns_container,
             title="Imagem 2",
             on_pan_callback=self._on_viewer_pan,
-            on_zoom_callback=self._on_viewer_zoom
+            on_zoom_callback=self._on_viewer_zoom,
+            on_open_request_callback=self.open_images_dialog
         )
         self.viewer3 = ImageViewer(
             self.columns_container,
             title="Imagem 3",
             on_pan_callback=self._on_viewer_pan,
-            on_zoom_callback=self._on_viewer_zoom
+            on_zoom_callback=self._on_viewer_zoom,
+            on_open_request_callback=self.open_images_dialog
         )
 
         # Exibe inicialmente Coluna 1 e Coluna 2 lado a lado
         self._arrange_columns()
+
+        # Habilita suporte a Arraste e Solte (Drag & Drop) nativo na janela
+        enable_drag_drop(self, self._on_window_drop)
 
     def _arrange_columns(self):
         """Organiza as colunas em grid proporcional de acordo com a visibilidade."""
@@ -271,12 +278,131 @@ class PhotoCompareApp(tk.Tk):
         self.bind("<Control-o>", lambda e: self._open_next_empty())
 
     def _open_next_empty(self):
-        """Abre arquivo no primeiro painel que estiver sem imagem."""
+        """Abre o seletor permitindo escolher até 3 imagens."""
+        target = None
         for v in self.get_visible_viewers():
             if not v.pil_image:
-                v.open_file_dialog()
-                return
-        self.viewer1.open_file_dialog()
+                target = v
+                break
+        self.open_images_dialog(target_viewer=target)
+
+    def _get_viewer_for_widget(self, widget):
+        """Identifica a qual ImageViewer o widget pertence (por hierarquia de parentesco)."""
+        curr = widget
+        while curr is not None:
+            if curr is self.viewer1:
+                return self.viewer1
+            if curr is self.viewer2:
+                return self.viewer2
+            if self.third_column_visible and curr is self.viewer3:
+                return self.viewer3
+            curr = getattr(curr, "master", None)
+        return None
+
+    def _on_window_drop(self, file_paths, drop_x, drop_y):
+        """Callback acionado quando arquivos são arrastados e soltos na janela do programa."""
+        if not file_paths:
+            return
+
+        target_viewer = None
+        try:
+            ptr_x = self.winfo_pointerx()
+            ptr_y = self.winfo_pointery()
+            hovered_widget = self.winfo_containing(ptr_x, ptr_y)
+            target_viewer = self._get_viewer_for_widget(hovered_widget)
+        except Exception:
+            pass
+
+        self.load_images_batch(file_paths, target_viewer=target_viewer)
+
+    def open_images_dialog(self, target_viewer=None):
+        """Abre o seletor de arquivos permitindo seleção de até 3 imagens."""
+        file_types = [
+            (
+                "Arquivos de Imagem",
+                "*.jpg *.jpeg *.png *.webp *.bmp *.tiff *.tif *.ico *.gif",
+            ),
+            ("JPEG (*.jpg, *.jpeg)", "*.jpg *.jpeg"),
+            ("PNG (*.png)", "*.png"),
+            ("WEBP (*.webp)", "*.webp"),
+            ("BMP (*.bmp)", "*.bmp"),
+            ("TIFF (*.tiff, *.tif)", "*.tiff *.tif"),
+            ("Todos os Arquivos", "*.*"),
+        ]
+        title = "Selecionar Imagens (até 3)"
+        if target_viewer:
+            title += f" - {target_viewer.title}"
+
+        chosen_paths = filedialog.askopenfilenames(
+            title=title,
+            filetypes=file_types
+        )
+        if chosen_paths:
+            self.load_images_batch(list(chosen_paths), target_viewer=target_viewer)
+
+    def load_images_batch(self, paths, target_viewer=None):
+        """
+        Carrega lote de imagens (selecionadas ou arrastadas) aplicando as regras do Photo Compare:
+        - 1 imagem: carrega no target_viewer (se clicado) ou na 1ª coluna livre (esquerda para direita).
+        - 2 imagens: carrega na Imagem 1 (esquerda) e Imagem 2 (direita).
+        - 3 imagens: abre automaticamente a 3ª coluna e carrega em Imagem 1, 2 e 3 da esquerda para a direita.
+        - Mais de 3 imagens: carrega as 3 primeiras e notifica o usuário.
+        """
+        valid_paths = [p for p in paths if os.path.isfile(p) and is_image_file(p)]
+        if not valid_paths:
+            if paths:
+                messagebox.showwarning(
+                    "Formato não suportado",
+                    "Nenhum arquivo de imagem compatível foi encontrado entre os arquivos selecionados ou soltos."
+                )
+            return
+
+        total = len(valid_paths)
+        if total > 3:
+            valid_paths = valid_paths[:3]
+            total = 3
+            if hasattr(self, "lbl_status"):
+                self.lbl_status.config(
+                    text="Aviso: Limite de 3 imagens por vez. Carregando as 3 primeiras."
+                )
+
+        if total == 1:
+            img_path = valid_paths[0]
+            dest_viewer = target_viewer
+            if dest_viewer is None:
+                for v in self.get_visible_viewers():
+                    if not v.pil_image:
+                        dest_viewer = v
+                        break
+                if dest_viewer is None:
+                    dest_viewer = self.viewer1
+
+            dest_viewer.load_image(img_path)
+            if hasattr(self, "lbl_status"):
+                self.lbl_status.config(
+                    text=f"Imagem carregada em {dest_viewer.title}: {os.path.basename(img_path)}"
+                )
+
+        elif total == 2:
+            self.viewer1.load_image(valid_paths[0])
+            self.viewer2.load_image(valid_paths[1])
+            if hasattr(self, "lbl_status"):
+                self.lbl_status.config(
+                    text="2 imagens carregadas: Imagem 1 (esquerda) e Imagem 2 (direita)."
+                )
+
+        elif total >= 3:
+            # Abre automaticamente a 3ª coluna se estiver fechada
+            if not self.third_column_visible:
+                self.toggle_third_column()
+
+            self.viewer1.load_image(valid_paths[0])
+            self.viewer2.load_image(valid_paths[1])
+            self.viewer3.load_image(valid_paths[2])
+            if hasattr(self, "lbl_status"):
+                self.lbl_status.config(
+                    text="3 imagens carregadas sequencialmente e 3ª coluna aberta automaticamente."
+                )
 
     def get_visible_viewers(self):
         """Retorna lista dos visualizadores visíveis no momento."""

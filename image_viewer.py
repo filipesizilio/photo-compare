@@ -24,12 +24,21 @@ class ImageViewer(tk.Frame):
     ZOOM_IN_FACTOR = 1.15
     ZOOM_OUT_FACTOR = 1.0 / 1.15
 
-    def __init__(self, parent, title="Imagem", on_pan_callback=None, on_zoom_callback=None, **kwargs):
+    def __init__(
+        self,
+        parent,
+        title="Imagem",
+        on_pan_callback=None,
+        on_zoom_callback=None,
+        on_open_request_callback=None,
+        **kwargs
+    ):
         super().__init__(parent, bg="#18181b", **kwargs)
 
         self.title = title
         self.on_pan_callback = on_pan_callback
         self.on_zoom_callback = on_zoom_callback
+        self.on_open_request_callback = on_open_request_callback
 
         self.file_path = None
         self.pil_image = None
@@ -171,7 +180,11 @@ class ImageViewer(tk.Frame):
         self.canvas.bind("<Configure>", self._on_resize)
 
     def open_file_dialog(self):
-        """Abre o seletor de arquivos do sistema para carregar uma imagem."""
+        """Abre o seletor de arquivos do sistema para carregar imagens."""
+        if self.on_open_request_callback:
+            self.on_open_request_callback(self)
+            return
+
         file_types = [
             (
                 "Arquivos de Imagem",
@@ -184,12 +197,12 @@ class ImageViewer(tk.Frame):
             ("TIFF (*.tiff, *.tif)", "*.tiff *.tif"),
             ("Todos os Arquivos", "*.*"),
         ]
-        chosen_path = filedialog.askopenfilename(
+        chosen_paths = filedialog.askopenfilenames(
             title=f"Selecionar Imagem - {self.title}",
             filetypes=file_types
         )
-        if chosen_path:
-            self.load_image(chosen_path)
+        if chosen_paths:
+            self.load_image(chosen_paths[0])
 
     def load_image(self, file_path):
         """Carrega uma imagem a partir do caminho do arquivo."""
@@ -408,15 +421,15 @@ class ImageViewer(tk.Frame):
         self.canvas.create_text(
             cx,
             cy - 20,
-            text="📂 Clique para abrir uma imagem",
+            text="📂 Clique para abrir ou arraste arquivos aqui",
             font=("Segoe UI", 12, "bold"),
             fill="#71717a",
             tags="empty"
         )
         self.canvas.create_text(
             cx,
-            cy + 15,
-            text="Formatos: JPG, PNG, WEBP, BMP, TIFF, GIF\nArraste com o mouse para mover • Roda para zoom",
+            cy + 16,
+            text="Selecione até 3 fotos ou solte do Windows Explorer\nArraste com o mouse para mover • Roda para zoom",
             font=("Segoe UI", 9),
             fill="#52525b",
             justify=tk.CENTER,

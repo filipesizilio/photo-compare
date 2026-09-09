@@ -123,13 +123,61 @@ def run_tests():
 
         # 10. Teste de fechar imagem (limpar)
         app.viewer1.close_image()
+        app.viewer2.close_image()
         app.update()
         assert app.viewer1.pil_image is None, "Viewer 1 deveria estar sem imagem"
         print("[OK] Teste 10: Limpeza de imagem OK")
 
+        # 11. Teste de carregamento em lote com 2 imagens
+        app.load_images_batch([img1_path, img2_path])
+        app.update()
+        assert app.viewer1.pil_image is not None, "Viewer 1 deveria ter recebido img1"
+        assert app.viewer2.pil_image is not None, "Viewer 2 deveria ter recebido img2"
+        assert app.viewer1.file_path == img1_path
+        assert app.viewer2.file_path == img2_path
+        print("[OK] Teste 11: Carregamento de 2 imagens nas colunas 1 e 2 OK")
+
+        # 12. Teste de carregamento em lote com 3 imagens (auto-abertura da 3ª coluna)
+        # Garante que a 3ª coluna está fechada antes do teste
+        if app.third_column_visible:
+            app.toggle_third_column()
+        app.update()
+        assert app.third_column_visible is False
+
+        app.load_images_batch([img1_path, img2_path, img3_path])
+        app.update()
+        assert app.third_column_visible is True, "3ª coluna deveria ter aberto automaticamente ao carregar 3 imagens"
+        assert app.viewer1.file_path == img1_path
+        assert app.viewer2.file_path == img2_path
+        assert app.viewer3.file_path == img3_path
+        print("[OK] Teste 12: Carregamento de 3 imagens com abertura automatica da 3a coluna OK")
+
+        # 13. Teste de carregamento de 1 imagem na primeira janela livre
+        app.viewer1.close_image()
+        app.viewer2.close_image()
+        app.viewer3.close_image()
+        app.update()
+
+        app.load_images_batch([img1_path])
+        app.update()
+        assert app.viewer1.file_path == img1_path, "1 imagem deveria ter ido para Viewer 1 (primeiro livre)"
+        assert app.viewer2.pil_image is None
+
+        # Carrega outra imagem única -> deve ir para a próxima livre (Viewer 2)
+        app.load_images_batch([img2_path])
+        app.update()
+        assert app.viewer2.file_path == img2_path, "Segunda imagem única deveria ter ido para Viewer 2 (proximo livre)"
+        print("[OK] Teste 13: Carregamento de 1 imagem preenchendo janelas livres da esquerda para a direita OK")
+
+        # 14. Teste de carregamento com target_viewer específico
+        app.load_images_batch([img3_path], target_viewer=app.viewer1)
+        app.update()
+        assert app.viewer1.file_path == img3_path, "Imagem deveria ter sido carregada especificamente no Viewer 1"
+        print("[OK] Teste 14: Carregamento direcionado a target_viewer especifico OK")
+
         app.destroy()
 
-    print("\nTODOS OS 10 TESTES PASSARAM COM SUCESSO!")
+    print("\nTODOS OS 14 TESTES PASSARAM COM SUCESSO!")
 
 
 if __name__ == "__main__":
