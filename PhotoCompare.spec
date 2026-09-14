@@ -2,7 +2,7 @@
 
 # Definimos as variáveis de identificação do projeto aqui
 NOME_PROJETO = "PhotoCompare"
-VERSAO_PROJETO = "1.0.2"
+VERSAO_PROJETO = "1.0.3"
 
 # Combinamos o nome e a versão para formar o nome final do executável
 NOME_EXECUTAVEL = f"{NOME_PROJETO}_v{VERSAO_PROJETO}"

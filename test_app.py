@@ -24,7 +24,7 @@ Funções Globais:
 import os
 import tempfile
 from PIL import Image, ImageDraw
-from main import PhotoCompareApp
+from photocompare import PhotoCompareApp
 
 
 def create_dummy_image(path, width, height, color, label):

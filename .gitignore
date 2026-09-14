@@ -7,5 +7,4 @@ dist/
 bkp/
 docs/
 build.py
-python-max-lines-gate-pylint.md
 pyproject.toml
