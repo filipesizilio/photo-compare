@@ -1,6 +1,6 @@
 """
 ================================================================================
-Módulo: exif_gui.py
+Módulo: exif_popup.py
 Descrição: Interface gráfica para comparação e cópia de dados EXIF entre imagens.
 ================================================================================
 """
@@ -12,8 +12,8 @@ from tkinter import ttk, messagebox
 
 from exif_core import _get_exif_data
 from exif_copy import copy_selected_exif_data
-from exif_layout import create_exif_popup
-from exif_display import (
+from exif_popup_layout import create_exif_popup
+from exif_tags_display import (
     create_exif_display,
     create_no_exif_message,
     enable_selection_controls,
@@ -148,7 +148,7 @@ def show_exif_comparison_popup(parent, viewers):
         canvas.grid(row=2, column=0, sticky="nsew")
         scrollbar.grid(row=2, column=1, sticky="ns")
 
-        # Cria a exibição de dados EXIF usando o módulo exif_display
+        # Cria a exibição de dados EXIF usando o módulo exif_tags_display
         if has_exif:
             tag_vars, tag_checkboxes, btn_select_all, btn_deselect_all = create_exif_display(
                 scrollable_frame, exif_data

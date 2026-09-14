@@ -7,8 +7,8 @@ Descrição: Camada de compatibilidade que re-exporta funções dos módulos esp
 ================================================================================
 """
 
-# Re-exporta funções do módulo GUI
-from exif_gui import show_exif_comparison_popup
+# Re-exporta funções do módulo popup
+from exif_popup import show_exif_comparison_popup
 
 # Re-exporta funções do módulo core
 from exif_core import (

@@ -4,7 +4,7 @@ import os
 from tkinter import messagebox
 from PIL import Image, ExifTags
 
-from exif_display import get_selected_tags
+from exif_tags_display import get_selected_tags
 
 
 def copy_selected_exif_data(parent, popup, viewer_data):

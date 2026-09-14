@@ -30,7 +30,7 @@ import tkinter as tk
 from datetime import datetime
 from tkinter import messagebox
 from PIL import Image, ImageTk, ImageDraw, ImageFont
-from image_rendering import ViewerRenderer
+from image_renderer import ViewerRenderer
 from image_viewer_io import ViewerImageIO
 from image_viewer_interaction import ViewerInteraction
 

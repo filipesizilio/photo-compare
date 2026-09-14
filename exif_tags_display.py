@@ -1,6 +1,6 @@
 """
 ================================================================================
-Módulo: exif_display.py
+Módulo: exif_tags_display.py
 Descrição: Funções para exibição estruturada de dados EXIF com checkboxes.
 ================================================================================
 """

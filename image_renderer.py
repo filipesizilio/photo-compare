@@ -1,4 +1,4 @@
-"""Renderização e elementos visuais do ImageViewer."""
+﻿"""Renderiza├º├úo e elementos visuais do ImageViewer."""
 
 import os
 from datetime import datetime
@@ -74,7 +74,7 @@ class ViewerRenderer:
         self.update_title_zoom()
 
     def get_image_date(self):
-        """Obtém a data da imagem a partir do EXIF ou da modificação do arquivo."""
+        """Obt├®m a data da imagem a partir do EXIF ou da modifica├º├úo do arquivo."""
         viewer = self.viewer
         if not viewer.file_path or not os.path.exists(viewer.file_path):
             return ""
@@ -104,7 +104,7 @@ class ViewerRenderer:
             return ""
 
     def draw_overlay_legend(self, canvas_width, canvas_height):
-        """Desenha a legenda semitransparente com caminho, resolução e data."""
+        """Desenha a legenda semitransparente com caminho, resolu├º├úo e data."""
         viewer = self.viewer
         if not viewer.file_path or not viewer.pil_image:
             return
@@ -116,7 +116,7 @@ class ViewerRenderer:
         first_line = viewer.file_path
         second_line = f"{megapixels:.1f} MP ({image_width}x{image_height})"
         if date_string:
-            second_line += f"   •   {date_string}"
+            second_line += f"   ÔÇó   {date_string}"
 
         try:
             title_font = ImageFont.truetype("segoeuib.ttf", 11)
@@ -168,7 +168,7 @@ class ViewerRenderer:
         )
 
     def draw_empty_state(self):
-        """Desenha a mensagem de instrução quando não há imagem carregada."""
+        """Desenha a mensagem de instru├º├úo quando n├úo h├í imagem carregada."""
         viewer = self.viewer
         canvas_width = viewer.canvas.winfo_width() or 400
         canvas_height = viewer.canvas.winfo_height() or 400
@@ -188,7 +188,7 @@ class ViewerRenderer:
         viewer.canvas.create_text(
             center_x,
             center_y - 20,
-            text="📂 Clique para abrir ou arraste arquivos aqui",
+            text="­ƒôé Clique para abrir ou arraste arquivos aqui",
             font=("Segoe UI", 12, "bold"),
             fill="#71717a",
             tags="empty",
@@ -196,7 +196,7 @@ class ViewerRenderer:
         viewer.canvas.create_text(
             center_x,
             center_y + 16,
-            text="Selecione até 3 fotos ou solte do Windows Explorer\nArraste com o mouse para mover • Roda para zoom",
+            text="Selecione at├® 3 fotos ou solte do Windows Explorer\nArraste com o mouse para mover ÔÇó Roda para zoom",
             font=("Segoe UI", 9),
             fill="#52525b",
             justify=tk.CENTER,
@@ -204,10 +204,10 @@ class ViewerRenderer:
         )
 
     def update_title_zoom(self):
-        """Atualiza o nível de zoom exibido no título da coluna."""
+        """Atualiza o n├¡vel de zoom exibido no t├¡tulo da coluna."""
         viewer = self.viewer
         if not viewer.pil_image:
             viewer.lbl_title.config(text=viewer.title)
         else:
             zoom_percent = int(round(viewer.scale * 100))
-            viewer.lbl_title.config(text=f"{viewer.title}  •  {zoom_percent}%")
+            viewer.lbl_title.config(text=f"{viewer.title}  ÔÇó  {zoom_percent}%")
