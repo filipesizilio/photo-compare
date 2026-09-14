@@ -6,3 +6,4 @@ exemplos/
 dist/
 bkp/
 build.py
+python-max-lines-gate-pylint.md

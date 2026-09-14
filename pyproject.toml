@@ -1,0 +1,8 @@
+[tool.pylint.main]
+disable = ["all"]
+
+[tool.pylint."messages control"]
+enable = ["C0302"]
+
+[tool.pylint.format]
+max-module-lines = 350

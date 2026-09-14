@@ -41,6 +41,7 @@ except ImportError:
     TKDND_AVAILABLE = False
 from image_viewer import ImageViewer
 from drag_drop import is_image_file, enable_drag_drop
+from exif_tools import show_exif_comparison_popup
 
 
 def resource_path(relative_path):
@@ -272,6 +273,23 @@ class PhotoCompareApp(tkdnd.Tk if TKDND_AVAILABLE else tk.Tk):
             command=self.align_to_first_panel
         )
         self.btn_align_panel1.pack(side=tk.LEFT, padx=3)
+
+        # Botão Comparar EXIF
+        self.btn_exif_compare = tk.Button(
+            self.toolbar,
+            text="📋 EXIF",
+            font=("Segoe UI", 9, "bold"),
+            bg="#2563eb",
+            fg="white",
+            activebackground="#1d4ed8",
+            activeforeground="white",
+            relief=tk.FLAT,
+            padx=10,
+            pady=4,
+            cursor="hand2",
+            command=self.show_exif_comparison
+        )
+        self.btn_exif_compare.pack(side=tk.LEFT, padx=3)
 
         # Dica rápida no lado direito
         lbl_hint = tk.Label(
@@ -642,6 +660,11 @@ class PhotoCompareApp(tkdnd.Tk if TKDND_AVAILABLE else tk.Tk):
                 viewer.render()
 
         self.lbl_status.config(text="Todos os painéis foram alinhados com base no Painel 1.")
+
+    def show_exif_comparison(self):
+        """Abre o popup de comparação de dados EXIF das imagens carregadas."""
+        viewers = self.get_visible_viewers()
+        show_exif_comparison_popup(self, viewers)
 
 
 def main():
