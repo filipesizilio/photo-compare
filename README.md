@@ -1,5 +1,7 @@
 # Photo Compare - Comparador de Imagens
 
+![Captura de tela do Photo Compare mostrando interface com 2 colunas](./assets/screenshot1.jpg)
+
 Aplicação desktop desenvolvida em **Python** e **Tkinter** para comparação visual lado a lado de imagens de alta resolução, com suporte a **2 ou 3 colunas**, **pan** (arrastar) e **zoom** sincronizados ou independentes.
 
 🔗 **Repositório GitHub**: [https://github.com/filipesizilio/photo-compare](https://github.com/filipesizilio/photo-compare)
@@ -24,10 +26,11 @@ Aplicação desktop desenvolvida em **Python** e **Tkinter** para comparação v
   - **🔒 Sincronização Travada**: Mover ou aplicar zoom em uma das imagens reflete instantaneamente em todas as outras colunas.
   - **🔓 Sincronização Destravada**: Permite alinhar ou reposicionar uma imagem individualmente antes de travar novamente.
 - **Ajustes Rápidos**:
-  - Botão **⤢ Ajustar Todas** (ajusta as imagens para caberem 100% na janela).
-  - Botão **1:1 (Tamanho Real)** (define a escala em 100% no centro da imagem).
-  - Botão **🎯 Alinhar ao Painel 1** (alinha o enquadramento e escala das outras colunas com base no primeiro painel).
+  - Botão **⤢ Ajustar [Todas]** (ajusta as imagens para caberem 100% na janela).
+  - Botão **1:1 [Todas]** (define a escala em 100% no centro da imagem).
+  - Botão **↙ Alinhar [a Imagem 1]** (alinha o enquadramento e escala das outras colunas com base no primeiro painel).
   - Duplo clique no canvas para ajustar a imagem à tela.
+- **📋 Comparação de EXIF**: Botão **EXIF** na barra superior abre uma janela comparando lado a lado os metadados EXIF (câmera, lente, ISO, abertura, velocidade, data, GPS, etc.) das imagens carregadas.
 - **Alta Performance (Viewport Crop)**:
   - Utiliza recorte da região visível (*viewport cropping*) com a biblioteca Pillow, garantindo navegação a 60 FPS mesmo para fotos pesadas de 24MP, 50MP ou superiores.
 - **Formatos Suportados**: JPG, JPEG, PNG, WEBP, BMP, TIFF, GIF, etc.
@@ -38,8 +41,8 @@ Aplicação desktop desenvolvida em **Python** e **Tkinter** para comparação v
 
 Você pode executar o aplicativo diretamente sem precisar ter o Python instalado! O executável já contém todas as bibliotecas e o ícone personalizado embutidos:
 
-- O arquivo gerado está em: **[`dist/PhotoCompare.exe`](file:///c:/Dev/photo-compare/dist/PhotoCompare.exe)**
-- Basta dar um duplo clique em `PhotoCompare.exe` para usar!
+- O arquivo gerado está em: **[`dist/PhotoCompare_v1.0.4.exe`](file:///c:/Dev/photo-compare/dist/PhotoCompare_v1.0.4.exe)**
+- Basta dar um duplo clique no executável para usar!
 
 ---
 
@@ -57,14 +60,16 @@ pip install -r requirements.txt
 ### 3. Execução
 Execute o arquivo principal:
 ```bash
-python main.py
+python photocompare.py
 ```
 
 ### 4. Gerar Novo Executável
-Caso faça alterações no código e deseje recompilar o `.exe`:
+Caso faça alterações no código e deseje recompilar o `.exe`, execute o script de build (que lê as configurações de nome e versão do arquivo `PhotoCompare.spec`):
 ```bash
-pyinstaller --noconsole --onefile --icon="assets\icon.ico" --add-data="assets;assets" --name="PhotoCompare" main.py
+python build.py
 ```
+
+O executável gerado seguirá o padrão `PhotoCompare_v<versão>.exe` na pasta `dist/` (a versão atual é definida em `PhotoCompare.spec`).
 
 ---
 
