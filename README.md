@@ -1,6 +1,15 @@
 # Photo Compare - Comparador de Imagens
 
-![Captura de tela do Photo Compare mostrando interface com 2 colunas](./assets/screenshot1.jpg)
+## Capturas de Tela
+
+![Interface com 2 colunas](./assets/screenshot1.jpg)
+*Interface padrão com 2 colunas para comparação direta*
+
+![Interface com 3 colunas](./assets/screenshot2.jpg)
+*Interface expandida com 3 colunas ativadas*
+
+![Interface de comparação EXIF](./assets/screenshot3.jpg)
+*Janela de comparação de metadados EXIF entre as imagens*
 
 Aplicação desktop desenvolvida em **Python** e **Tkinter** para comparação visual lado a lado de imagens de alta resolução, com suporte a **2 ou 3 colunas**, **pan** (arrastar) e **zoom** sincronizados ou independentes.
 
