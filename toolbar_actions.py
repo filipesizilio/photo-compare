@@ -59,5 +59,5 @@ class ToolbarActions:
         self.viewer_coordinator.reset_all_100()
 
     def align_to_first_panel(self):
-        """Alinha a escala e a posição das outras colunas com base no Painel 1."""
+        """Alinha a escala e a posição das outras colunas com base na Imagem A."""
         self.viewer_coordinator.align_to_first_panel()

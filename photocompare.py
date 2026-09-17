@@ -22,22 +22,44 @@ import sys
 import webbrowser
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+import customtkinter as ctk
 try:
     import tkinterdnd2 as tkdnd
     TKDND_AVAILABLE = True
 except ImportError:
-    tkdnd = tk
+    tkdnd = None
     TKDND_AVAILABLE = False
 
+if TKDND_AVAILABLE:
+    class _HybridRoot(ctk.CTk, tkdnd.TkinterDnD.DnDWrapper):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.TkdndVersion = tkdnd.TkinterDnD._require(self)
+else:
+    class _HybridRoot(ctk.CTk):
+        pass
+
+from app_config import (
+    AppConfig,
+    COLOR_WINDOW_BG,
+    DEFAULT_APPEARANCE_MODE,
+    DEFAULT_COLOR_THEME,
+    COLOR_BORDER_IMAGE_A,
+    COLOR_BORDER_IMAGE_B,
+    COLOR_BORDER_IMAGE_C,
+)
+
+ctk.set_appearance_mode(DEFAULT_APPEARANCE_MODE)
+ctk.set_default_color_theme(DEFAULT_COLOR_THEME)
+
 from image_viewer import ImageViewer
-from app_config import AppConfig
 from app_ui import AppUI
 from image_loader import ImageLoader
 from viewer_coordinator import ViewerCoordinator
 from toolbar_actions import ToolbarActions
 
 
-class PhotoCompareApp(tkdnd.Tk if TKDND_AVAILABLE else tk.Tk):
+class PhotoCompareApp(_HybridRoot):
     """Janela principal da aplicação Photo Compare."""
 
     def __init__(self):
@@ -45,7 +67,7 @@ class PhotoCompareApp(tkdnd.Tk if TKDND_AVAILABLE else tk.Tk):
 
         self.title("Photo Compare - Comparador de Imagens")
         self.minsize(800, 500)
-        self.configure(bg="#0f0f11")
+        self.configure(fg_color=COLOR_WINDOW_BG)
 
         # Callbacks compartilhados entre módulos
         self.callbacks = {
@@ -69,21 +91,24 @@ class PhotoCompareApp(tkdnd.Tk if TKDND_AVAILABLE else tk.Tk):
         # Agora cria os visualizadores com columns_container como parent
         self.viewer1 = ImageViewer(
             self.app_ui.columns_container,
-            title="Imagem 1",
+            title="Imagem A",
+            accent_color=COLOR_BORDER_IMAGE_A,
             on_pan_callback=self._on_viewer_pan,
             on_zoom_callback=self._on_viewer_zoom,
             on_open_request_callback=self._open_next_empty
         )
         self.viewer2 = ImageViewer(
             self.app_ui.columns_container,
-            title="Imagem 2",
+            title="Imagem B",
+            accent_color=COLOR_BORDER_IMAGE_B,
             on_pan_callback=self._on_viewer_pan,
             on_zoom_callback=self._on_viewer_zoom,
             on_open_request_callback=self._open_next_empty
         )
         self.viewer3 = ImageViewer(
             self.app_ui.columns_container,
-            title="Imagem 3",
+            title="Imagem C",
+            accent_color=COLOR_BORDER_IMAGE_C,
             on_pan_callback=self._on_viewer_pan,
             on_zoom_callback=self._on_viewer_zoom,
             on_open_request_callback=self._open_next_empty
@@ -210,7 +235,7 @@ class PhotoCompareApp(tkdnd.Tk if TKDND_AVAILABLE else tk.Tk):
         self.toolbar_actions.reset_all_100()
 
     def align_to_first_panel(self):
-        """Alinha a escala e a posição das outras colunas com base no Painel 1."""
+        """Alinha a escala e a posição das outras colunas com base na Imagem A."""
         self.toolbar_actions.align_to_first_panel()
 
     def show_exif_comparison(self):

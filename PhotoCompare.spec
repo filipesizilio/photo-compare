@@ -2,17 +2,22 @@
 
 # Definimos as variáveis de identificação do projeto aqui
 NOME_PROJETO = "PhotoCompare"
-VERSAO_PROJETO = "1.0.4"
+VERSAO_PROJETO = "1.1.0"
 
 # Combinamos o nome e a versão para formar o nome final do executável
 NOME_EXECUTAVEL = f"{NOME_PROJETO}_v{VERSAO_PROJETO}"
+
+from PyInstaller.utils.hooks import collect_data_files
+
+ctk_datas = collect_data_files('customtkinter')
+tkdnd_datas = collect_data_files('tkinterdnd2')
 
 a = Analysis(
     ['photocompare.py'],
     pathex=[],
     binaries=[],
-    datas=[('assets', 'assets')],
-    hiddenimports=['tkinterdnd2'],
+    datas=[('assets', 'assets'), ('themes', 'themes')] + ctk_datas + tkdnd_datas,
+    hiddenimports=['tkinterdnd2', 'customtkinter', 'darkdetect'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

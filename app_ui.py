@@ -8,6 +8,83 @@ Descrição: Construção da interface do usuário (barra de ferramentas, barra 
 
 import tkinter as tk
 from tkinter import ttk
+import customtkinter as ctk
+
+from app_config import (
+    CORNER_RADIUS,
+    COLOR_TOOLBAR_BG,
+    COLOR_STATUSBAR_BG,
+    COLOR_COLUMNS_CONTAINER_BG,
+    COLOR_SEPARATOR,
+    COLOR_BRAND_TEXT,
+    COLOR_TEXT_MAIN,
+    COLOR_TEXT_MUTED,
+    COLOR_LINK_TEXT,
+    COLOR_LINK_HOVER,
+    COLOR_PRIMARY,
+    COLOR_PRIMARY_HOVER,
+    COLOR_PRIMARY_TEXT,
+    COLOR_TRANSPARENT,
+    COLOR_HOVER_MUTED,
+    COLOR_SYNC_LOCKED_FG,
+    COLOR_SYNC_LOCKED_HOVER,
+    COLOR_SYNC_UNLOCKED_FG,
+    COLOR_SYNC_UNLOCKED_HOVER,
+)
+
+
+def add_tooltip(widget, text, delay=400):
+    """Helper de tooltip com delay e descarte automático ao sair ou clicar."""
+    tip = {"win": None, "after_id": None}
+
+    def show(_event=None):
+        def _create():
+            try:
+                win = tk.Toplevel(widget)
+                win.overrideredirect(True)
+                win.attributes("-topmost", True)
+                label = tk.Label(
+                    win, text=text, background="#2b2b2b", foreground="white",
+                    padx=8, pady=4, borderwidth=0, font=("Segoe UI", 9)
+                )
+                label.pack()
+                x = widget.winfo_rootx() + 10
+                y = widget.winfo_rooty() + widget.winfo_height() + 6
+                win.geometry(f"+{x}+{y}")
+                tip["win"] = win
+            except Exception:
+                pass
+        tip["after_id"] = widget.after(delay, _create)
+
+    def hide(_event=None):
+        if tip["after_id"]:
+            try:
+                widget.after_cancel(tip["after_id"])
+            except Exception:
+                pass
+            tip["after_id"] = None
+        if tip["win"]:
+            try:
+                tip["win"].destroy()
+            except Exception:
+                pass
+            tip["win"] = None
+
+    try:
+        widget.bind("<Enter>", show)
+        widget.bind("<Leave>", hide)
+        widget.bind("<Button-1>", hide)
+    except NotImplementedError:
+        # Widgets compostos do CustomTkinter (como CTkSegmentedButton) não implementam bind() no container
+        # Vincula nos botões internos se disponíveis
+        buttons = getattr(widget, "_buttons_dict", {}).values()
+        for btn in buttons:
+            try:
+                btn.bind("<Enter>", show)
+                btn.bind("<Leave>", hide)
+                btn.bind("<Button-1>", hide)
+            except Exception:
+                pass
 
 
 class AppUI:
@@ -42,172 +119,189 @@ class AppUI:
             pass
 
     def _build_ui(self):
-        # 1. Barra de ferramentas superior
-        self.toolbar = tk.Frame(self.root, bg="#18181b", height=50, padx=12, pady=6)
+        # 1. Barra de ferramentas superior (CTkFrame com suporte a modo claro/escuro)
+        self.toolbar = ctk.CTkFrame(
+            self.root,
+            fg_color=COLOR_TOOLBAR_BG,
+            corner_radius=0,
+            height=50
+        )
         self.toolbar.pack(fill=tk.X, side=tk.TOP)
         self.toolbar.pack_propagate(False)
 
         # Logotipo / Nome do App
-        lbl_brand = tk.Label(
+        lbl_brand = ctk.CTkLabel(
             self.toolbar,
             text="Photo Compare",
-            font=("Segoe UI", 12, "bold"),
-            fg="#f4f4f5",
-            bg="#18181b"
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=COLOR_BRAND_TEXT
         )
-        lbl_brand.pack(side=tk.LEFT, padx=(0, 16))
+        lbl_brand.pack(side=tk.LEFT, padx=(12, 14), pady=6)
 
         # Divisor visual
-        sep1 = tk.Frame(self.toolbar, bg="#27272a", width=1, height=28)
-        sep1.pack(side=tk.LEFT, padx=(0, 16), fill=tk.Y, pady=4)
+        sep1 = ctk.CTkFrame(
+            self.toolbar,
+            fg_color=COLOR_SEPARATOR,
+            corner_radius=0,
+            width=1,
+            height=28
+        )
+        sep1.pack(side=tk.LEFT, padx=(0, 12), fill=tk.Y, pady=10)
 
-        # Botão de Trava de Sincronização: apenas o símbolo de cadeado "🔒"
-        self.btn_sync = tk.Button(
+        # Botão de Trava de Sincronização: ícone "🔒" com tooltip
+        self.btn_sync = ctk.CTkButton(
             self.toolbar,
             text="🔒",
-            font=("Segoe UI", 10, "bold"),
-            relief=tk.FLAT,
-            width=3,
-            pady=4,
-            cursor="hand2",
+            width=38,
+            height=34,
+            corner_radius=CORNER_RADIUS,
+            font=ctk.CTkFont(size=15),
+            fg_color=COLOR_SYNC_LOCKED_FG,
+            hover_color=COLOR_SYNC_LOCKED_HOVER,
             command=self.callbacks['toggle_sync']
         )
-        self.btn_sync.pack(side=tk.LEFT, padx=(0, 10))
+        self.btn_sync.pack(side=tk.LEFT, padx=(0, 8))
+        add_tooltip(self.btn_sync, "Alternar sincronização de pan e zoom [Espaço]")
 
-        # Botão para alternar 3ª Coluna
-        self.btn_toggle_3rd = tk.Button(
+        # Segmented control para quantidade de imagens (2 ou 3)
+        self.seg_qtd_imagens = ctk.CTkSegmentedButton(
             self.toolbar,
-            text="➕ 3ª Imagem",
-            font=("Segoe UI", 9, "bold"),
-            bg="#3f3f46",
-            fg="#f4f4f5",
-            activebackground="#52525b",
-            activeforeground="white",
-            relief=tk.FLAT,
-            padx=10,
-            pady=4,
-            cursor="hand2",
-            command=self.callbacks['toggle_third_column']
+            values=["2 imagens", "3 imagens"],
+            command=self._on_qtd_imagens_change,
+            corner_radius=CORNER_RADIUS,
+            width=170,
+            height=32
         )
-        self.btn_toggle_3rd.pack(side=tk.LEFT, padx=(0, 10))
+        self.seg_qtd_imagens.set("3 imagens" if self.third_column_visible else "2 imagens")
+        self.seg_qtd_imagens.pack(side=tk.LEFT, padx=(0, 10))
+        add_tooltip(self.seg_qtd_imagens, "Alternar entre 2 e 3 colunas de comparação")
 
-        # Divisor visual
-        sep2 = tk.Frame(self.toolbar, bg="#27272a", width=1, height=28)
-        sep2.pack(side=tk.LEFT, padx=(0, 16), fill=tk.Y, pady=4)
+        # Compatibilidade com referências existentes a self.btn_toggle_3rd
+        self.btn_toggle_3rd = self.seg_qtd_imagens
 
-        # Botão Ajustar Todas
-        self.btn_fit_all = tk.Button(
+        # Botão Ajustar Todas (ícone ⛶ com fonte Segoe UI Symbol)
+        self.btn_fit_all = ctk.CTkButton(
             self.toolbar,
-            text="⤢ Ajustar [Todas]",
-            font=("Segoe UI", 9),
-            bg="#27272a",
-            fg="#e4e4e7",
-            activebackground="#3f3f46",
-            activeforeground="white",
-            relief=tk.FLAT,
-            padx=9,
-            pady=4,
-            cursor="hand2",
+            text="⛶",
+            width=38,
+            height=34,
+            corner_radius=CORNER_RADIUS,
+            font=ctk.CTkFont(family="Segoe UI Symbol", size=16, weight="bold"),
+            fg_color=COLOR_TRANSPARENT,
+            hover_color=COLOR_HOVER_MUTED,
+            text_color=COLOR_TEXT_MAIN,
             command=self.callbacks['fit_all_to_window']
         )
-        self.btn_fit_all.pack(side=tk.LEFT, padx=3)
+        self.btn_fit_all.pack(side=tk.LEFT, padx=(4, 2))
+        add_tooltip(self.btn_fit_all, "Ajustar todas as imagens à tela [F]")
 
-        # Botão 100% Todas
-        self.btn_reset_all = tk.Button(
+        # Botão 100% Todas (ícone 1:1)
+        self.btn_reset_all = ctk.CTkButton(
             self.toolbar,
-            text="1:1 [Todas]",
-            font=("Segoe UI", 9),
-            bg="#27272a",
-            fg="#e4e4e7",
-            activebackground="#3f3f46",
-            activeforeground="white",
-            relief=tk.FLAT,
-            padx=9,
-            pady=4,
-            cursor="hand2",
+            text="1:1",
+            width=38,
+            height=34,
+            corner_radius=CORNER_RADIUS,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color=COLOR_TRANSPARENT,
+            hover_color=COLOR_HOVER_MUTED,
+            text_color=COLOR_TEXT_MAIN,
             command=self.callbacks['reset_all_100']
         )
-        self.btn_reset_all.pack(side=tk.LEFT, padx=3)
+        self.btn_reset_all.pack(side=tk.LEFT, padx=2)
+        add_tooltip(self.btn_reset_all, "Redefinir todas para zoom 100% (1:1)")
 
-        # Botão Alinhar ao Painel 1
-        self.btn_align_panel1 = tk.Button(
+        # Botão Alinhar à Imagem A (ícone ⇄ com fonte Segoe UI Symbol)
+        self.btn_align_panel1 = ctk.CTkButton(
             self.toolbar,
-            text="↙ Alinhar [a Imagem 1]",
-            font=("Segoe UI", 9),
-            bg="#27272a",
-            fg="#e4e4e7",
-            activebackground="#3f3f46",
-            activeforeground="white",
-            relief=tk.FLAT,
-            padx=9,
-            pady=4,
-            cursor="hand2",
+            text="⇄",
+            width=38,
+            height=34,
+            corner_radius=CORNER_RADIUS,
+            font=ctk.CTkFont(family="Segoe UI Symbol", size=17, weight="bold"),
+            fg_color=COLOR_TRANSPARENT,
+            hover_color=COLOR_HOVER_MUTED,
+            text_color=COLOR_TEXT_MAIN,
             command=self.callbacks['align_to_first_panel']
         )
-        self.btn_align_panel1.pack(side=tk.LEFT, padx=3)
+        self.btn_align_panel1.pack(side=tk.LEFT, padx=2)
+        add_tooltip(self.btn_align_panel1, "Alinhar pan e zoom de todas as imagens com a Imagem A")
 
-        # Botão Comparar EXIF
-        self.btn_exif_compare = tk.Button(
+        # Botão Comparar EXIF (ícone ℹ de informação/metadados)
+        self.btn_exif_compare = ctk.CTkButton(
             self.toolbar,
-            text="📋 EXIF",
-            font=("Segoe UI", 9, "bold"),
-            bg="#2563eb",
-            fg="white",
-            activebackground="#1d4ed8",
-            activeforeground="white",
-            relief=tk.FLAT,
-            padx=10,
-            pady=4,
-            cursor="hand2",
+            text="ℹ",
+            width=38,
+            height=34,
+            corner_radius=CORNER_RADIUS,
+            font=ctk.CTkFont(family="Segoe UI Symbol", size=16, weight="bold"),
+            fg_color=COLOR_PRIMARY,
+            hover_color=COLOR_PRIMARY_HOVER,
+            text_color=COLOR_PRIMARY_TEXT,
             command=self.callbacks['show_exif_comparison']
         )
         self.btn_exif_compare.pack(side=tk.LEFT, padx=3)
+        add_tooltip(self.btn_exif_compare, "Metadados e comparação EXIF")
 
-        # Dica rápida no lado direito
-        lbl_hint = tk.Label(
+        # Botão de alternância de tema (Sol/Lua)
+        is_dark_boot = (ctk.get_appearance_mode() == "Dark")
+        self.btn_theme = ctk.CTkButton(
             self.toolbar,
-            text="Atalho: [Espaço] Sincronizar • [F] Ajustar • Arraste arquivos aqui",
-            font=("Segoe UI", 9),
-            fg="#71717a",
-            bg="#18181b"
+            text="☀" if is_dark_boot else "🌙",
+            width=38,
+            height=34,
+            corner_radius=CORNER_RADIUS,
+            font=ctk.CTkFont(size=15),
+            fg_color=COLOR_TRANSPARENT,
+            hover_color=COLOR_HOVER_MUTED,
+            text_color=COLOR_TEXT_MAIN,
+            command=self._toggle_theme
         )
-        lbl_hint.pack(side=tk.RIGHT, padx=4)
+        self.btn_theme.pack(side=tk.RIGHT, padx=(0, 10))
+        add_tooltip(self.btn_theme, "Alternar tema claro/escuro")
 
         # 2. Barra de status inferior
-        self.statusbar = tk.Frame(self.root, bg="#18181b", height=26, padx=12)
+        self.statusbar = ctk.CTkFrame(
+            self.root,
+            fg_color=COLOR_STATUSBAR_BG,
+            corner_radius=0,
+            height=28
+        )
         self.statusbar.pack(fill=tk.X, side=tk.BOTTOM)
         self.statusbar.pack_propagate(False)
 
-        self.lbl_status = tk.Label(
+        self.lbl_status = ctk.CTkLabel(
             self.statusbar,
             text="Pronto. Selecione até 3 imagens ou arraste arquivos do Windows Explorer para cá.",
-            font=("Segoe UI", 8),
-            fg="#71717a",
-            bg="#18181b"
+            font=ctk.CTkFont(size=11),
+            text_color=COLOR_TEXT_MUTED
         )
-        self.lbl_status.pack(side=tk.LEFT)
+        self.lbl_status.pack(side=tk.LEFT, padx=(12, 0))
 
         # Link clicável para o repositório GitHub
-        self.lbl_github = tk.Label(
+        self.lbl_github = ctk.CTkLabel(
             self.statusbar,
             text="🌐 GitHub: Photo-Compare",
-            font=("Segoe UI", 8, "underline"),
-            fg="#60a5fa",
-            bg="#18181b",
+            font=ctk.CTkFont(size=11, underline=True),
+            text_color=COLOR_LINK_TEXT,
             cursor="hand2"
         )
-        self.lbl_github.pack(side=tk.RIGHT)
+        self.lbl_github.pack(side=tk.RIGHT, padx=(0, 12))
         self.lbl_github.bind(
             "<Button-1>",
             lambda e: self.callbacks['open_github']
         )
-        self.lbl_github.bind("<Enter>", lambda e: self.lbl_github.config(fg="#93c5fd"))
-        self.lbl_github.bind("<Leave>", lambda e: self.lbl_github.config(fg="#60a5fa"))
+        self.lbl_github.bind("<Enter>", lambda e: self.lbl_github.configure(text_color=COLOR_LINK_HOVER))
+        self.lbl_github.bind("<Leave>", lambda e: self.lbl_github.configure(text_color=COLOR_LINK_TEXT))
 
         self._update_sync_button_style()
 
         # 3. Área central com colunas de comparação
-        self.columns_container = tk.Frame(self.root, bg="#09090b")
+        self.columns_container = ctk.CTkFrame(
+            self.root,
+            fg_color=COLOR_COLUMNS_CONTAINER_BG,
+            corner_radius=0
+        )
         self.columns_container.pack(fill=tk.BOTH, expand=True, padx=4, pady=4)
         self.columns_container.rowconfigure(0, weight=1)
 
@@ -243,30 +337,45 @@ class AppUI:
             self.callbacks['viewer2'].grid(row=0, column=1, sticky="nsew", padx=2, pady=2)
             self.callbacks['viewer3'].grid(row=0, column=2, sticky="nsew", padx=2, pady=2)
 
+    def _toggle_theme(self):
+        """Alterna entre os modos claro e escuro dinamicamente."""
+        escuro = (ctk.get_appearance_mode() == "Dark")
+        novo = "light" if escuro else "dark"
+        ctk.set_appearance_mode(novo)
+        if hasattr(self, "btn_theme"):
+            self.btn_theme.configure(text="🌙" if novo == "light" else "☀")
+        for key in ('viewer1', 'viewer2', 'viewer3'):
+            viewer = self.callbacks.get(key)
+            if viewer and hasattr(viewer, "update_appearance_mode"):
+                viewer.update_appearance_mode()
+
+    def _on_qtd_imagens_change(self, valor):
+        """Roteia alteração do segmented control para toggle_third_column evitando loops."""
+        quer_tres = (valor == "3 imagens")
+        if quer_tres != self.third_column_visible:
+            self.callbacks['toggle_third_column']()
+
     def _update_sync_button_style(self):
         """Atualiza a aparência do botão de trava de sincronização (símbolo 🔒 ou 🔓)."""
-        if self.callbacks.get('sync_locked', True):
-            self.btn_sync.config(
+        is_locked = self.callbacks.get('sync_locked', True)
+        if is_locked:
+            self.btn_sync.configure(
                 text="🔒",
-                bg="#16a34a",
-                fg="white",
-                activebackground="#15803d",
-                activeforeground="white"
+                fg_color=COLOR_SYNC_LOCKED_FG,
+                hover_color=COLOR_SYNC_LOCKED_HOVER
             )
             if hasattr(self, "lbl_status"):
-                self.lbl_status.config(
+                self.lbl_status.configure(
                     text="Sincronização ativada (🔒): pan e zoom aplicados em uma imagem moverão as outras."
                 )
         else:
-            self.btn_sync.config(
+            self.btn_sync.configure(
                 text="🔓",
-                bg="#4b5563",
-                fg="#f4f4f5",
-                activebackground="#374151",
-                activeforeground="white"
+                fg_color=COLOR_SYNC_UNLOCKED_FG,
+                hover_color=COLOR_SYNC_UNLOCKED_HOVER
             )
             if hasattr(self, "lbl_status"):
-                self.lbl_status.config(
+                self.lbl_status.configure(
                     text="Sincronização destravada (🔓): ajuste cada imagem individualmente para alinhamento."
                 )
 
@@ -276,22 +385,14 @@ class AppUI:
         self._update_sync_button_style()
 
     def update_third_column_button(self, visible):
-        """Atualiza o botão da terceira coluna."""
+        """Atualiza o botão/segmented control da terceira coluna."""
         self.third_column_visible = visible
-        if visible:
-            self.btn_toggle_3rd.config(
-                text="❌  3ª Imagem (ocultar)",
-                bg="#3f3f46",
-                activebackground="#52525b"
-            )
-        else:
-            self.btn_toggle_3rd.config(
-                text="➕ 3ª Imagem",
-                bg="#3f3f46",
-                activebackground="#52525b"
-            )
+        if hasattr(self, "seg_qtd_imagens"):
+            val = "3 imagens" if visible else "2 imagens"
+            if self.seg_qtd_imagens.get() != val:
+                self.seg_qtd_imagens.set(val)
 
     def set_status(self, text):
         """Atualiza o texto da barra de status."""
         if hasattr(self, "lbl_status"):
-            self.lbl_status.config(text=text)
+            self.lbl_status.configure(text=text)

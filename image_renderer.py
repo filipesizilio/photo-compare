@@ -1,9 +1,19 @@
-﻿"""Renderiza├º├úo e elementos visuais do ImageViewer."""
+"""Renderiza├º├úo e elementos visuais do ImageViewer."""
 
 import os
 from datetime import datetime
 import tkinter as tk
-from PIL import Image, ImageTk, ImageDraw, ImageFont
+from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageColor
+from app_config import (
+    COLOR_EMPTY_STATE_BORDER,
+    COLOR_EMPTY_STATE_TEXT,
+    COLOR_EMPTY_STATE_SUBTEXT,
+    COLOR_OVERLAY_BG,
+    COLOR_OVERLAY_TEXT,
+    COLOR_OVERLAY_SUBTEXT,
+    OVERLAY_ALPHA,
+    get_mode_color,
+)
 
 
 class ViewerRenderer:
@@ -116,14 +126,14 @@ class ViewerRenderer:
         first_line = viewer.file_path
         second_line = f"{megapixels:.1f} MP ({image_width}x{image_height})"
         if date_string:
-            second_line += f"   ÔÇó   {date_string}"
+            second_line += f"   •   {date_string}"
 
         try:
-            title_font = ImageFont.truetype("segoeuib.ttf", 11)
-            subtitle_font = ImageFont.truetype("segoeui.ttf", 11)
+            title_font = ImageFont.truetype("segoeuib.ttf", 14)
+            subtitle_font = ImageFont.truetype("segoeui.ttf", 13)
         except Exception:
             try:
-                title_font = ImageFont.truetype("segoeui.ttf", 11)
+                title_font = ImageFont.truetype("segoeui.ttf", 14)
                 subtitle_font = title_font
             except Exception:
                 title_font = ImageFont.load_default()
@@ -134,7 +144,7 @@ class ViewerRenderer:
                 bounds = font.getbbox(text)
                 return bounds[2] - bounds[0], bounds[3] - bounds[1]
             except Exception:
-                return len(text) * 7, 14
+                return len(text) * 8, 16
 
         first_width, first_height = measure(first_line, title_font)
         second_width, second_height = measure(second_line, subtitle_font)
@@ -143,16 +153,43 @@ class ViewerRenderer:
             first_line = "..." + first_line[6:]
             first_width, first_height = measure(first_line, title_font)
 
-        box_width = max(first_width, second_width) + 20
-        box_height = first_height + second_height + 14
-        box = Image.new("RGBA", (box_width, box_height), (0, 0, 0, 128))
+        padding_x = 12
+        padding_y = 8
+        spacing_between_lines = 4
+
+        bg_hex = get_mode_color(COLOR_OVERLAY_BG)
+        text_hex = get_mode_color(COLOR_OVERLAY_TEXT)
+        subtext_hex = get_mode_color(COLOR_OVERLAY_SUBTEXT)
+
+        try:
+            bg_rgb = ImageColor.getrgb(bg_hex)
+        except Exception:
+            bg_rgb = (0, 0, 0)
+        alpha = int(max(0.0, min(1.0, float(OVERLAY_ALPHA))) * 255)
+        bg_rgba = (bg_rgb[0], bg_rgb[1], bg_rgb[2], alpha)
+
+        try:
+            text_rgb = ImageColor.getrgb(text_hex)
+            text_fill = (text_rgb[0], text_rgb[1], text_rgb[2], 255)
+        except Exception:
+            text_fill = (255, 255, 255, 255)
+
+        try:
+            subtext_rgb = ImageColor.getrgb(subtext_hex)
+            subtext_fill = (subtext_rgb[0], subtext_rgb[1], subtext_rgb[2], 230)
+        except Exception:
+            subtext_fill = (235, 235, 235, 225)
+
+        box_width = max(first_width, second_width) + (padding_x * 2)
+        box_height = first_height + second_height + (padding_y * 2) + spacing_between_lines
+        box = Image.new("RGBA", (box_width, box_height), bg_rgba)
         draw = ImageDraw.Draw(box)
-        draw.text((10, 4), first_line, font=title_font, fill=(255, 255, 255, 255))
+        draw.text((padding_x, padding_y), first_line, font=title_font, fill=text_fill)
         draw.text(
-            (10, 6 + first_height + 2),
+            (padding_x, padding_y + first_height + spacing_between_lines),
             second_line,
             font=subtitle_font,
-            fill=(235, 235, 235, 225),
+            fill=subtext_fill,
         )
 
         viewer.tk_legend = ImageTk.PhotoImage(box)
@@ -168,19 +205,24 @@ class ViewerRenderer:
         )
 
     def draw_empty_state(self):
-        """Desenha a mensagem de instru├º├úo quando n├úo h├í imagem carregada."""
+        """Desenha a mensagem de instrução quando não há imagem carregada."""
         viewer = self.viewer
+        viewer.canvas.delete("empty")
         canvas_width = viewer.canvas.winfo_width() or 400
         canvas_height = viewer.canvas.winfo_height() or 400
         center_x, center_y = canvas_width // 2, canvas_height // 2
         padding = 20
+
+        border_color = get_mode_color(COLOR_EMPTY_STATE_BORDER)
+        text_color = get_mode_color(COLOR_EMPTY_STATE_TEXT)
+        subtext_color = get_mode_color(COLOR_EMPTY_STATE_SUBTEXT)
 
         viewer.canvas.create_rectangle(
             padding,
             padding,
             canvas_width - padding,
             canvas_height - padding,
-            outline="#3f3f46",
+            outline=border_color,
             dash=(4, 4),
             width=1,
             tags="empty",
@@ -188,26 +230,26 @@ class ViewerRenderer:
         viewer.canvas.create_text(
             center_x,
             center_y - 20,
-            text="­ƒôé Clique para abrir ou arraste arquivos aqui",
+            text="📂 Clique para abrir ou arraste arquivos aqui",
             font=("Segoe UI", 12, "bold"),
-            fill="#71717a",
+            fill=text_color,
             tags="empty",
         )
         viewer.canvas.create_text(
             center_x,
             center_y + 16,
-            text="Selecione at├® 3 fotos ou solte do Windows Explorer\nArraste com o mouse para mover ÔÇó Roda para zoom",
+            text="Selecione até 3 fotos ou solte do Windows Explorer\nArraste com o mouse para mover • Roda para zoom",
             font=("Segoe UI", 9),
-            fill="#52525b",
+            fill=subtext_color,
             justify=tk.CENTER,
             tags="empty",
         )
 
     def update_title_zoom(self):
-        """Atualiza o n├¡vel de zoom exibido no t├¡tulo da coluna."""
+        """Atualiza o nível de zoom exibido no título da coluna."""
         viewer = self.viewer
         if not viewer.pil_image:
             viewer.lbl_title.config(text=viewer.title)
         else:
             zoom_percent = int(round(viewer.scale * 100))
-            viewer.lbl_title.config(text=f"{viewer.title}  ÔÇó  {zoom_percent}%")
+            viewer.lbl_title.config(text=f"{viewer.title}  •  {zoom_percent}%")

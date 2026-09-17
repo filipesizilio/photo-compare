@@ -11,7 +11,7 @@ Função do Script:
     Suíte de testes automatizados para validação completa do Photo Compare.
     Testa inicialização com 2 colunas, carregamento de imagens sintéticas,
     pan e zoom sincronizados e destravados, abertura e fechamento da 3ª coluna,
-    alinhamento ao painel 1, fechamento de imagens, carregamento em lote com
+    alinhamento à Imagem A, fechamento de imagens, carregamento em lote com
     regras de distribuição (1, 2 e 3 imagens) e auto-abertura da 3ª coluna.
 
 Funções Globais:
@@ -62,8 +62,8 @@ def run_tests():
         app.viewer2.load_image(img2_path)
         app.update()
 
-        assert app.viewer1.pil_image is not None, "Imagem 1 não foi carregada"
-        assert app.viewer2.pil_image is not None, "Imagem 2 não foi carregada"
+        assert app.viewer1.pil_image is not None, "Imagem A não foi carregada"
+        assert app.viewer2.pil_image is not None, "Imagem B não foi carregada"
         print("[OK] Teste 2: Carregamento de imagens nas 2 primeiras colunas OK")
 
         # 3. Teste de Pan sincronizado
@@ -107,7 +107,7 @@ def run_tests():
         app.viewer3.load_image(img3_path)
         app.update()
 
-        assert app.viewer3.pil_image is not None, "Imagem 3 não foi carregada na 3ª coluna"
+        assert app.viewer3.pil_image is not None, "Imagem C não foi carregada na 3ª coluna"
         print("[OK] Teste 6: Abertura da 3ª coluna e carregamento de imagem OK")
 
         # 7. Teste de Pan sincronizado com 3 colunas
@@ -121,12 +121,12 @@ def run_tests():
         assert app.viewer3.offset_x == v3_x_before - 25
         print("[OK] Teste 7: Pan sincronizado nas 3 colunas simultaneamente OK")
 
-        # 8. Teste do botão Alinhar ao Painel 1
+        # 8. Teste do botão Alinhar à Imagem A
         app.align_to_first_panel()
         app.update()
         assert app.viewer2.scale == app.viewer1.scale, "Viewer 2 deveria adotar a mesma escala do Viewer 1"
         assert app.viewer3.scale == app.viewer1.scale, "Viewer 3 deveria adotar a mesma escala do Viewer 1"
-        print("[OK] Teste 8: Alinhamento geral baseado no Painel 1 OK")
+        print("[OK] Teste 8: Alinhamento geral baseado na Imagem A OK")
 
         # 9. Teste de remoção da 3ª coluna
         app.toggle_third_column()

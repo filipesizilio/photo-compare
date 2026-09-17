@@ -73,14 +73,14 @@ class ViewerCoordinator:
 
     def align_to_first_panel(self):
         """
-        Alinha a escala e a posição das outras colunas com base no Painel 1.
+        Alinha a escala e a posição das outras colunas com base na Imagem A.
         Útil para imagens de resoluções semelhantes precisando de alinhamento imediato.
         """
         ref = self.viewers['viewer1']
         if not ref.pil_image:
             self.callbacks['show_warning'](
                 "Aviso",
-                "Abra uma imagem no Painel 1 primeiro para usá-lo como referência de alinhamento."
+                "Abra uma imagem na Imagem A primeiro para usá-la como referência de alinhamento."
             )
             return
 
@@ -99,4 +99,4 @@ class ViewerCoordinator:
                 viewer.offset_y = tgt_ch / 2.0 - center_img_y * viewer.scale
                 viewer.render()
 
-        self.callbacks['set_status']("Todos os painéis foram alinhados com base no Painel 1.")
+        self.callbacks['set_status']("Todos os painéis foram alinhados com base na Imagem A.")

@@ -29,13 +29,34 @@ import os
 import tkinter as tk
 from datetime import datetime
 from tkinter import messagebox
+import customtkinter as ctk
 from PIL import Image, ImageTk, ImageDraw, ImageFont
 from image_renderer import ViewerRenderer
 from image_viewer_io import ViewerImageIO
 from image_viewer_interaction import ViewerInteraction
+from app_config import (
+    CORNER_RADIUS,
+    COLOR_VIEWER_BG,
+    COLOR_VIEWER_HEADER,
+    COLOR_VIEWER_TITLE,
+    COLOR_PRIMARY,
+    COLOR_PRIMARY_HOVER,
+    COLOR_PRIMARY_TEXT,
+    COLOR_BTN_ACTION_FG,
+    COLOR_BTN_ACTION_HOVER,
+    COLOR_BTN_ACTION_TEXT,
+    COLOR_BTN_DANGER_FG,
+    COLOR_BTN_DANGER_HOVER,
+    COLOR_BTN_DANGER_TEXT,
+    COLOR_CANVAS_BG,
+    COLOR_CANVAS_BORDER,
+    COLOR_SEPARATOR,
+    get_mode_color,
+    get_accent_color_for_title,
+)
 
 
-class ImageViewer(tk.Frame):
+class ImageViewer(ctk.CTkFrame):
     """
     Painel individual de visualização de imagem com suporte a:
     - Zoom ancorado no cursor
@@ -54,15 +75,26 @@ class ImageViewer(tk.Frame):
     def __init__(
         self,
         parent,
-        title="Imagem",
+        title="Imagem A",
         on_pan_callback=None,
         on_zoom_callback=None,
         on_open_request_callback=None,
+        accent_color=None,
         **kwargs
     ):
-        super().__init__(parent, bg="#18181b", **kwargs)
-
+        # Remove chaves legadas de bg se passadas via kwargs
+        kwargs.pop("bg", None)
         self.title = title
+        self.accent_color = accent_color or get_accent_color_for_title(title)
+        super().__init__(
+            parent,
+            fg_color=COLOR_VIEWER_BG,
+            corner_radius=CORNER_RADIUS,
+            border_width=4,
+            border_color=self.accent_color,
+            **kwargs
+        )
+
         self.on_pan_callback = on_pan_callback
         self.on_zoom_callback = on_zoom_callback
         self.on_open_request_callback = on_open_request_callback
@@ -92,113 +124,131 @@ class ImageViewer(tk.Frame):
 
     def _build_ui(self):
         # Barra superior do painel
-        self.header = tk.Frame(self, bg="#27272a", height=38, padx=6, pady=3)
-        self.header.pack(fill=tk.X, side=tk.TOP)
+        self.header = ctk.CTkFrame(
+            self,
+            fg_color=COLOR_VIEWER_HEADER,
+            corner_radius=CORNER_RADIUS,
+            height=38
+        )
+        self.header.pack(fill=tk.X, side=tk.TOP, padx=6, pady=(6, 3))
         self.header.pack_propagate(False)
 
-        # Título da coluna (exibe título e nível de zoom)
-        self.lbl_title = tk.Label(
+        # Título da coluna (exibe título e nível de zoom com a cor de destaque da imagem)
+        self.lbl_title = ctk.CTkLabel(
             self.header,
             text=self.title,
-            font=("Segoe UI", 10, "bold"),
-            fg="#60a5fa",
-            bg="#27272a"
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color=self.accent_color
         )
-        self.lbl_title.pack(side=tk.LEFT, padx=(0, 6))
+        # Suporte a chamada legada .config(text=...)
+        self.lbl_title.config = self.lbl_title.configure
+        self.lbl_title.pack(side=tk.LEFT, padx=(10, 8))
 
-        # Botão Abrir - texto "📂", tamanho padronizado (width=3)
-        self.btn_open = tk.Button(
+        # Botão Abrir - texto "📂", tamanho padronizado
+        self.btn_open = ctk.CTkButton(
             self.header,
             text="📂",
-            font=("Segoe UI", 9, "bold"),
-            bg="#2563eb",
-            fg="white",
-            activebackground="#1d4ed8",
-            activeforeground="white",
-            relief=tk.FLAT,
-            width=3,
-            pady=1,
-            cursor="hand2",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            fg_color=COLOR_PRIMARY,
+            hover_color=COLOR_PRIMARY_HOVER,
+            text_color=COLOR_PRIMARY_TEXT,
+            width=32,
+            height=28,
+            corner_radius=CORNER_RADIUS,
             command=self.open_file_dialog
         )
         self.btn_open.pack(side=tk.LEFT, padx=2)
 
-        # Botão Ajustar à Tela - texto "⤢", tamanho padronizado (width=3)
-        self.btn_fit = tk.Button(
+        # Botão Ajustar à Tela - texto "⛶", tamanho padronizado
+        self.btn_fit = ctk.CTkButton(
             self.header,
-            text="⤢",
-            font=("Segoe UI", 9, "bold"),
-            bg="#3f3f46",
-            fg="#f4f4f5",
-            activebackground="#52525b",
-            activeforeground="white",
-            relief=tk.FLAT,
-            width=3,
-            pady=1,
-            cursor="hand2",
+            text="⛶",
+            font=ctk.CTkFont(family="Segoe UI Symbol", size=14, weight="bold"),
+            fg_color=COLOR_BTN_ACTION_FG,
+            hover_color=COLOR_BTN_ACTION_HOVER,
+            text_color=COLOR_BTN_ACTION_TEXT,
+            width=32,
+            height=28,
+            corner_radius=CORNER_RADIUS,
             command=self.fit_to_window
         )
         self.btn_fit.pack(side=tk.LEFT, padx=2)
 
-        # Botão 1:1 - texto "1:1", tamanho padronizado (width=3)
-        self.btn_100 = tk.Button(
+        # Botão 1:1 - texto "1:1", tamanho padronizado
+        self.btn_100 = ctk.CTkButton(
             self.header,
             text="1:1",
-            font=("Segoe UI", 9, "bold"),
-            bg="#3f3f46",
-            fg="#f4f4f5",
-            activebackground="#52525b",
-            activeforeground="white",
-            relief=tk.FLAT,
-            width=3,
-            pady=1,
-            cursor="hand2",
+            font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color=COLOR_BTN_ACTION_FG,
+            hover_color=COLOR_BTN_ACTION_HOVER,
+            text_color=COLOR_BTN_ACTION_TEXT,
+            width=32,
+            height=28,
+            corner_radius=CORNER_RADIUS,
             command=self.reset_100
         )
         self.btn_100.pack(side=tk.LEFT, padx=2)
 
-        # Botão Girar 90° - texto "↻", tamanho padronizado (width=3)
-        self.btn_rotate = tk.Button(
+        # Botão Girar 90° - texto "↻", tamanho padronizado
+        self.btn_rotate = ctk.CTkButton(
             self.header,
             text="↻",
-            font=("Segoe UI", 9, "bold"),
-            bg="#3f3f46",
-            fg="#f4f4f5",
-            activebackground="#52525b",
-            activeforeground="white",
-            relief=tk.FLAT,
-            width=3,
-            pady=1,
-            cursor="hand2",
+            font=ctk.CTkFont(family="Segoe UI Symbol", size=14, weight="bold"),
+            fg_color=COLOR_BTN_ACTION_FG,
+            hover_color=COLOR_BTN_ACTION_HOVER,
+            text_color=COLOR_BTN_ACTION_TEXT,
+            width=32,
+            height=28,
+            corner_radius=CORNER_RADIUS,
             command=self.rotate_90
         )
         self.btn_rotate.pack(side=tk.LEFT, padx=2)
 
-        # Botão Fechar Imagem ("X") no canto superior direito da coluna, tamanho padronizado (width=3)
-        self.btn_close = tk.Button(
+        # Botão Fechar Imagem ("X") no canto superior direito da coluna
+        self.btn_close = ctk.CTkButton(
             self.header,
             text="✕",
-            font=("Segoe UI", 9, "bold"),
-            bg="#7f1d1d",
-            fg="white",
-            activebackground="#991b1b",
-            activeforeground="white",
-            relief=tk.FLAT,
-            width=3,
-            pady=1,
-            cursor="hand2",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color=COLOR_BTN_DANGER_FG,
+            hover_color=COLOR_BTN_DANGER_HOVER,
+            text_color=COLOR_BTN_DANGER_TEXT,
+            width=32,
+            height=28,
+            corner_radius=CORNER_RADIUS,
             command=self.close_image
         )
 
         # Canvas para exibição da imagem e da legenda sobreposta
         self.canvas = tk.Canvas(
             self,
-            bg="#18181b",
-            highlightthickness=1,
-            highlightbackground="#27272a",
+            bg=get_mode_color(COLOR_CANVAS_BG),
+            highlightthickness=0,
             cursor="arrow"
         )
-        self.canvas.pack(fill=tk.BOTH, expand=True)
+        self.canvas.pack(fill=tk.BOTH, expand=True, padx=6, pady=(3, 6))
+
+        # Atualização dinâmica ao alternar modo claro/escuro
+        ctk.AppearanceModeTracker.add(self._on_appearance_mode_change)
+
+    def _on_appearance_mode_change(self, mode=None):
+        self.update_appearance_mode()
+
+    def update_appearance_mode(self):
+        """Atualiza o canvas e redesenha elementos visuais ao alternar modo claro/escuro."""
+        try:
+            if not self.winfo_exists():
+                return
+            self.configure(border_color=self.accent_color)
+            self.lbl_title.configure(text_color=self.accent_color)
+            self.canvas.configure(
+                bg=get_mode_color(COLOR_CANVAS_BG),
+            )
+            if not self.pil_image:
+                self.renderer.draw_empty_state()
+            else:
+                self.renderer.render()
+        except Exception:
+            pass
 
     def _bind_events(self):
         # Arraste / Pan

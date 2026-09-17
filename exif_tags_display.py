@@ -7,6 +7,14 @@ Descrição: Funções para exibição estruturada de dados EXIF com checkboxes.
 
 import tkinter as tk
 from tkinter import ttk
+import customtkinter as ctk
+
+from app_config import (
+    CORNER_RADIUS,
+    COLOR_BTN_ACTION_FG,
+    COLOR_BTN_ACTION_HOVER,
+    COLOR_BTN_ACTION_TEXT,
+)
 
 
 def create_exif_display(scrollable_frame, exif_data, on_selection_change=None):
@@ -26,38 +34,34 @@ def create_exif_display(scrollable_frame, exif_data, on_selection_change=None):
     tag_vars = {}
     
     # Frame para botão "Selecionar Tudo"
-    select_all_frame = tk.Frame(scrollable_frame, bg="#09090b")
+    select_all_frame = ctk.CTkFrame(scrollable_frame, fg_color="transparent", corner_radius=0)
     select_all_frame.grid(row=0, column=0, columnspan=3, sticky="ew", padx=8, pady=(8, 4))
     
-    btn_select_all = tk.Button(
+    btn_select_all = ctk.CTkButton(
         select_all_frame,
         text="☑ Selecionar Tudo",
-        font=("Segoe UI", 8, "bold"),
-        bg="#3f3f46",
-        fg="#f4f4f5",
-        activebackground="#52525b",
-        activeforeground="white",
-        relief=tk.FLAT,
-        padx=8,
-        pady=2,
-        cursor="hand2",
-        state=tk.DISABLED
+        font=ctk.CTkFont(size=11, weight="bold"),
+        fg_color=COLOR_BTN_ACTION_FG,
+        hover_color=COLOR_BTN_ACTION_HOVER,
+        text_color=COLOR_BTN_ACTION_TEXT,
+        width=120,
+        height=28,
+        corner_radius=CORNER_RADIUS,
+        state="disabled"
     )
     btn_select_all.pack(side=tk.LEFT, padx=(0, 8))
     
-    btn_deselect_all = tk.Button(
+    btn_deselect_all = ctk.CTkButton(
         select_all_frame,
         text="☐ Desmarcar Tudo",
-        font=("Segoe UI", 8),
-        bg="#3f3f46",
-        fg="#f4f4f5",
-        activebackground="#52525b",
-        activeforeground="white",
-        relief=tk.FLAT,
-        padx=8,
-        pady=2,
-        cursor="hand2",
-        state=tk.DISABLED
+        font=ctk.CTkFont(size=11),
+        fg_color=COLOR_BTN_ACTION_FG,
+        hover_color=COLOR_BTN_ACTION_HOVER,
+        text_color=COLOR_BTN_ACTION_TEXT,
+        width=120,
+        height=28,
+        corner_radius=CORNER_RADIUS,
+        state="disabled"
     )
     btn_deselect_all.pack(side=tk.LEFT)
     
@@ -197,11 +201,25 @@ def enable_selection_controls(tag_checkboxes, btn_select_all, btn_deselect_all, 
         btn_deselect_all: Botão "Desmarcar Tudo"
         enabled: True para habilitar, False para desabilitar
     """
-    state = tk.NORMAL if enabled else tk.DISABLED
+    state_str = "normal" if enabled else "disabled"
+    tk_state = tk.NORMAL if enabled else tk.DISABLED
     for cb in tag_checkboxes.values():
-        cb.config(state=state)
-    btn_select_all.config(state=state)
-    btn_deselect_all.config(state=state)
+        try:
+            cb.configure(state=state_str)
+        except Exception:
+            try:
+                cb.config(state=tk_state)
+            except Exception:
+                pass
+    try:
+        btn_select_all.configure(state=state_str)
+        btn_deselect_all.configure(state=state_str)
+    except Exception:
+        try:
+            btn_select_all.config(state=tk_state)
+            btn_deselect_all.config(state=tk_state)
+        except Exception:
+            pass
 
 
 def select_all_tags(tag_vars):

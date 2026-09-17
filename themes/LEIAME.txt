@@ -1,0 +1,84 @@
+================================================================================
+GUIA DE PERSONALIZAÇÃO DE TEMAS - PHOTOCOMPARE
+================================================================================
+
+Os temas do PhotoCompare permitem personalizar completamente a aparência da 
+interface através de arquivos .json salvos nesta pasta (%APPDATA%\PhotoCompare\themes\).
+
+Para usar um tema personalizado:
+1. Crie uma cópia de 'default.json' nesta pasta com outro nome (ex: 'meu_tema.json').
+2. Abra o arquivo '%APPDATA%\PhotoCompare\config.json' e defina a chave "theme":
+   {
+     "theme": "meu_tema"
+   }
+   (Use o nome do arquivo sem a extensão .json).
+3. Reinicie o aplicativo.
+
+
+--------------------------------------------------------------------------------
+PROPRIEDADES E VARIÁVEIS DO TEMA (EXCETO CORES)
+--------------------------------------------------------------------------------
+
+1. "name" (Texto):
+   - O que faz: Nome de exibição ou identificação amigável do seu tema.
+   - Exemplo: "name": "Dark Cyberpunk"
+
+2. "version" (Texto):
+   - O que faz: Versão do tema definida por você para controle próprio.
+   - Exemplo: "version": "1.0"
+
+3. "appearance_mode" (Texto):
+   - O que faz: Controla o modo geral de exibição da interface do CustomTkinter 
+     (claro, escuro ou sincronizado com o sistema operacional).
+   - Opções disponíveis:
+       * "system" : Detecta automaticamente o modo claro/escuro do Windows.
+       * "dark"   : Força a interface no Modo Escuro, independentemente do Windows.
+       * "light"  : Força a interface no Modo Claro, independentemente do Windows.
+   - Exemplo: "appearance_mode": "dark"
+
+4. "color_theme" (Texto):
+   - O que faz: Tema base de paleta interna de widgets do CustomTkinter 
+     (sliders, barras de rolagem, caixas de diálogo padrão).
+   - Opções nativas disponíveis:
+       * "blue"       : Paleta base azul padrão moderna.
+       * "dark-blue"  : Paleta azul mais escura e sóbria.
+       * "green"      : Paleta base com tons de verde.
+       * Ou o caminho para um arquivo .json de paleta externa do CustomTkinter.
+   - Exemplo: "color_theme": "blue"
+
+5. "corner_radius" (Número inteiro):
+   - O que faz: Raio de arredondamento (em pixels) dos cantos de botões, 
+     menus segmentados e painéis da interface.
+   - Valores recomendados:
+       * 0       : Cantos retos / quadrados (estilo flat industrial ou Windows 10).
+       * 4 a 6   : Arredondamento sutil e elegante (estilo moderno Windows 11 / padrão).
+       * 10 a 16 : Cantos bem arredondados (estilo pílula / fluído).
+   - Exemplo: "corner_radius": 6
+
+6. "overlay_alpha" (Número decimal de 0.0 a 1.0):
+   - O que faz: Define o nível de opacidade/transparência do fundo da caixa 
+     flutuante (Legenda Overlay) exibida sobre as fotos.
+   - Valores:
+       * 0.0 : Fundo totalmente invisível / 100% transparente (apenas o texto aparece).
+       * 0.35: Alta transparência (fundo suave).
+       * 0.55: Transparência moderada e equilibrada (padrão recomendado).
+       * 0.85: Fundo quase opaco (máximo contraste e destaque).
+       * 1.0 : Totalmente opaco (sem qualquer transparência).
+   - Exemplo: "overlay_alpha": 0.55
+
+
+--------------------------------------------------------------------------------
+FORMATOS ACEITOS PARA CORES (DENTRO DO BLOCO "colors")
+--------------------------------------------------------------------------------
+
+Você pode fornecer as cores de duas maneiras:
+1. Par com [Modo Claro, Modo Escuro]:
+   Permite que a interface se adapte caso você alterne o modo do Windows.
+   Exemplo: "window_bg": ["#f4f4f5", "#0f0f11"]
+
+2. Cor única (valor fixo para ambos os modos):
+   Exemplo: "primary": "#2563eb"
+
+Formatos de valor de cor aceitos:
+- Hexadecimal: "#18181b", "#ffffff", "#2563eb"
+- Nomes conhecidos Tkinter/X11: "white", "black", "transparent", "gray92", "gray80"

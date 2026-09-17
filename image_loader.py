@@ -89,8 +89,8 @@ class ImageLoader:
         """
         Carrega lote de imagens (selecionadas ou arrastadas) aplicando as regras do Photo Compare:
         - 1 imagem: carrega no target_viewer (se clicado) ou na 1ª coluna livre (esquerda para direita).
-        - 2 imagens: carrega na Imagem 1 (esquerda) e Imagem 2 (direita).
-        - 3 imagens: abre automaticamente a 3ª coluna e carrega em Imagem 1, 2 e 3 da esquerda para a direita.
+        - 2 imagens: carrega na Imagem A (esquerda) e Imagem B (direita).
+        - 3 imagens: abre automaticamente a 3ª coluna e carrega em Imagem A, B e C da esquerda para a direita.
         - Mais de 3 imagens: carrega as 3 primeiras e notifica o usuário.
         """
         valid_paths = [p for p in paths if os.path.isfile(p) and is_image_file(p)]
@@ -125,7 +125,7 @@ class ImageLoader:
         elif total == 2:
             self.viewers['viewer1'].load_image(valid_paths[0])
             self.viewers['viewer2'].load_image(valid_paths[1])
-            self.callbacks['set_status']("2 imagens carregadas: Imagem 1 (esquerda) e Imagem 2 (direita).")
+            self.callbacks['set_status']("2 imagens carregadas: Imagem A (esquerda) e Imagem B (direita).")
 
         elif total >= 3:
             # Abre automaticamente a 3ª coluna se estiver fechada
