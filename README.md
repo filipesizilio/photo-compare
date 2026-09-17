@@ -2,7 +2,7 @@
 
 ## Capturas de Tela
 
-![Interface com 2 colunas](./assets/screenshot104_r1.jpg)
+![Interface com 2 colunas](./assets/screenshot104_1.jpg)
 *Interface padrão com 2 colunas para comparação direta*
 
 ![Interface com 3 colunas](./assets/screenshot104_2.jpg)
