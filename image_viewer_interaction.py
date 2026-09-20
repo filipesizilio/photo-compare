@@ -9,6 +9,44 @@ class ViewerInteraction:
     def __init__(self, viewer):
         self.viewer = viewer
 
+    def fit_to_window(self):
+        viewer = self.viewer
+        if not viewer.pil_image:
+            return
+
+        cw = viewer.canvas.winfo_width()
+        ch = viewer.canvas.winfo_height()
+
+        if cw <= 10 or ch <= 10:
+            viewer.after(50, self.fit_to_window)
+            return
+
+        iw, ih = viewer.orig_size
+        padding = 0.96
+        scale_w = (cw * padding) / iw
+        scale_h = (ch * padding) / ih
+        viewer.scale = min(scale_w, scale_h)
+
+        viewer.offset_x = (cw - iw * viewer.scale) / 2.0
+        viewer.offset_y = (ch - ih * viewer.scale) / 2.0
+
+        viewer.render()
+
+    def reset_100(self):
+        viewer = self.viewer
+        if not viewer.pil_image:
+            return
+
+        cw = viewer.canvas.winfo_width()
+        ch = viewer.canvas.winfo_height()
+        iw, ih = viewer.orig_size
+
+        viewer.scale = 1.0
+        viewer.offset_x = (cw - iw) / 2.0
+        viewer.offset_y = (ch - ih) / 2.0
+
+        viewer.render()
+
     def rotate_90(self):
         viewer = self.viewer
         if not viewer.pil_image:

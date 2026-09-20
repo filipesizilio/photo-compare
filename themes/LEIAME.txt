@@ -16,25 +16,34 @@ Para usar um tema personalizado:
 
 
 --------------------------------------------------------------------------------
-PROPRIEDADES E VARIÁVEIS DO TEMA (EXCETO CORES)
+PROPRIEDADES E CONFIGURAÇÕES DO TEMA
 --------------------------------------------------------------------------------
 
 1. "name" (Texto):
-   - O que faz: Nome de exibição ou identificação amigável do seu tema.
+   - O que faz: Nome de exibição ou identificação amigável do tema.
    - Exemplo: "name": "Dark Cyberpunk"
 
 2. "version" (Texto):
    - O que faz: Versão do tema definida por você para controle próprio.
    - Exemplo: "version": "1.0"
 
-3. "appearance_mode" (Texto):
-   - O que faz: Controla o modo geral de exibição da interface do CustomTkinter 
-     (claro, escuro ou sincronizado com o sistema operacional).
-   - Opções disponíveis:
+3. "appearance_mode" (Texto - Modo Inicial/Padrão):
+   - O que faz: Define o modo de aparência inicial utilizado na PRIMEIRA ABERTURA
+     do aplicativo (quando ainda não há escolha do usuário salva em config.json).
+   - Comportamento de prevalência:
+     * O PhotoCompare salva em '%APPDATA%\PhotoCompare\config.json' a opção escolhida
+       pelo usuário ao clicar no botão de alternância (Sol/Lua na barra superior).
+     * Após essa escolha, o valor em 'config.json' SEMPRE prevalecerá sobre a 
+       configuração padrão deste arquivo .json.
+     * Para forçar um modo específico via config.json, utilize:
+       "appearance_mode": "dark"   (força modo escuro)
+       "appearance_mode": "light"  (força modo claro)
+       "appearance_mode": "system" (sincroniza com o modo do Windows)
+   - Opções aceitas no tema:
        * "system" : Detecta automaticamente o modo claro/escuro do Windows.
-       * "dark"   : Força a interface no Modo Escuro, independentemente do Windows.
-       * "light"  : Força a interface no Modo Claro, independentemente do Windows.
-   - Exemplo: "appearance_mode": "dark"
+       * "dark"   : Inicia por padrão no Modo Escuro.
+       * "light"  : Inicia por padrão no Modo Claro.
+   - Exemplo: "appearance_mode": "system"
 
 4. "color_theme" (Texto):
    - O que faz: Tema base de paleta interna de widgets do CustomTkinter 
@@ -61,10 +70,10 @@ PROPRIEDADES E VARIÁVEIS DO TEMA (EXCETO CORES)
    - Valores:
        * 0.0 : Fundo totalmente invisível / 100% transparente (apenas o texto aparece).
        * 0.35: Alta transparência (fundo suave).
-       * 0.55: Transparência moderada e equilibrada (padrão recomendado).
+       * 0.45: Transparência moderada e equilibrada (padrão recomendado).
        * 0.85: Fundo quase opaco (máximo contraste e destaque).
        * 1.0 : Totalmente opaco (sem qualquer transparência).
-   - Exemplo: "overlay_alpha": 0.55
+   - Exemplo: "overlay_alpha": 0.45
 
 
 --------------------------------------------------------------------------------
@@ -73,12 +82,68 @@ FORMATOS ACEITOS PARA CORES (DENTRO DO BLOCO "colors")
 
 Você pode fornecer as cores de duas maneiras:
 1. Par com [Modo Claro, Modo Escuro]:
-   Permite que a interface se adapte caso você alterne o modo do Windows.
+   Permite que a interface se adapte dinamicamente ao alternar entre os modos.
    Exemplo: "window_bg": ["#f4f4f5", "#0f0f11"]
 
-2. Cor única (valor fixo para ambos os modos):
+2. Cor única (valor fixo independente do modo):
    Exemplo: "primary": "#2563eb"
 
 Formatos de valor de cor aceitos:
-- Hexadecimal: "#18181b", "#ffffff", "#2563eb"
-- Nomes conhecidos Tkinter/X11: "white", "black", "transparent", "gray92", "gray80"
+- Hexadecimal: "#18181b", "#ffffff", "#2563eb", "#7c3aed"
+- Nomes conhecidos Tkinter/X11: "white", "black", "transparent", "gray92", "gray85", "gray80"
+
+
+--------------------------------------------------------------------------------
+REFERÊNCIA DOS CAMPOS DE COR EM "colors"
+--------------------------------------------------------------------------------
+
+ESTRUTURA GERAL DA JANELA:
+- "window_bg"            : Cor de fundo da janela principal.
+- "toolbar_bg"           : Fundo da barra de ferramentas superior.
+- "statusbar_bg"         : Fundo da barra de status inferior.
+- "columns_container_bg" : Fundo da área central onde as colunas se posicionam.
+- "separator"            : Linha divisória vertical na barra de ferramentas.
+
+TEXTOS E LINKS:
+- "brand_text"           : Texto do logotipo "Photo Compare".
+- "text_main"            : Cor do texto principal de leitura e rótulos.
+- "text_muted"           : Cor de textos secundários, dicas e legendas suaves.
+- "link_text"            : Cor padrão de links clicáveis (ex: link do GitHub).
+- "link_hover"           : Cor do link ao passar o cursor do mouse.
+
+BOTÕES E INTERAÇÃO:
+- "primary"              : Cor de destaque principal (botões de ação primária).
+- "primary_hover"        : Cor de destaque primário ao passar o mouse.
+- "primary_text"         : Cor do texto sobre botões primários.
+- "transparent"          : Cor transparente ("transparent") para botões vazados.
+- "hover_muted"          : Cor de fundo ao passar o mouse sobre botões vazados.
+- "btn_action_fg"        : Cor de fundo de botões secundários (ex: Limpar, Cancelar).
+- "btn_action_hover"     : Fundo de botões secundários ao passar o mouse.
+- "btn_action_text"      : Texto de botões secundários.
+- "btn_danger_fg"        : Cor de botões com ações destrutivas (ex: fechar coluna).
+- "btn_danger_hover"     : Cor do botão de perigo ao passar o mouse.
+- "btn_danger_text"      : Cor do texto no botão de perigo.
+
+BOTÃO DE SINCRONIZAÇÃO:
+- "sync_locked_fg"       : Fundo do botão quando a sincronização está travada (🔒).
+- "sync_locked_hover"    : Fundo do botão travado ao passar o mouse.
+- "sync_unlocked_fg"     : Fundo do botão quando a sincronização está destravada (🔓).
+- "sync_unlocked_hover"  : Fundo do botão destravado ao passar o mouse.
+
+PAINÉIS DE IMAGEM (VISUALIZADORES):
+- "viewer_bg"            : Fundo do contêiner de cada painel de visualização.
+- "viewer_header"        : Fundo da barra superior do painel (título e ações).
+- "canvas_bg"            : Fundo da área de desenho da imagem (canvas).
+- "empty_state_border"   : Borda tracejada/sutil quando nenhuma imagem está carregada.
+- "empty_state_text"     : Texto principal da área vazia ("Clique ou arraste...").
+- "empty_state_subtext"  : Texto secundário da área vazia (formatos suportados).
+
+BORDAS DE DESTAQUE POR IMAGEM:
+- "border_image_a"       : Borda de identificação da Imagem A (padrão: Azul).
+- "border_image_b"       : Borda de identificação da Imagem B (padrão: Violeta).
+- "border_image_c"       : Borda de identificação da Imagem C (padrão: Ciano).
+
+LEGENDA FLUTUANTE (OVERLAY):
+- "overlay_bg"           : Fundo da caixa com nome/resolução sobre a imagem.
+- "overlay_text"         : Texto principal da legenda flutuante.
+- "overlay_subtext"      : Texto secundário (resolução, zoom) da legenda.

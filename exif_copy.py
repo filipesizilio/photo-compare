@@ -1,76 +1,160 @@
-"""Cópia seletiva de dados EXIF entre imagens."""
+"""
+================================================================================
+Módulo: exif_copy.py
+Descrição: Processamento e execução segura de cópia e transferência seletiva
+           de metadados EXIF entre múltiplas imagens utilizando Piexif.
+================================================================================
+"""
 
 import os
-from tkinter import messagebox
+import shutil
 from PIL import Image, ExifTags
 
-from exif_tags_display import get_selected_tags
+
+SUPPORTED_EXIF_EXTENSIONS = {".jpg", ".jpeg", ".tif", ".tiff", ".webp"}
 
 
-def copy_selected_exif_data(parent, popup, viewer_data):
-    """Copia os dados selecionados da imagem From para as imagens To."""
-    from_idx = None
-    to_indices = []
+def check_file_exif_writable(file_path: str):
+    """
+    Verifica se o formato do arquivo é suportado pelo Piexif para gravação direta de EXIF.
+    Retorna (is_writable: bool, reason: str).
+    """
+    if not file_path or not os.path.exists(file_path):
+        return False, "Arquivo não encontrado."
 
-    for idx, data in viewer_data.items():
-        role = data['role_var'].get()
-        if role == "from":
-            from_idx = idx
-        elif role == "to":
-            to_indices.append(idx)
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext not in SUPPORTED_EXIF_EXTENSIONS:
+        if ext == ".png":
+            return False, "O formato PNG possui suporte restrito a metadados nativos EXIF via Piexif. Apenas JPG/TIFF/WEBP são suportados para gravação completa."
+        return False, f"Formato '{ext}' não suportado para gravação direta de metadados EXIF."
 
-    if from_idx is None or not to_indices:
-        messagebox.showwarning(
-            "Aviso",
-            "Selecione uma imagem como Origem (From) e pelo menos uma como Destino (To).",
-        )
-        return
+    # Verifica permissão de escrita
+    if not os.access(file_path, os.W_OK):
+        return False, "Sem permissão de escrita no arquivo."
 
-    from_data = viewer_data[from_idx]
-    selected_tags = get_selected_tags(from_data['tag_vars'])
-    if not selected_tags:
-        messagebox.showwarning("Aviso", "Selecione pelo menos um dado EXIF para copiar.")
-        return
+    return True, ""
 
-    from_path = from_data['file_path']
-    to_names = [os.path.basename(viewer_data[i]['file_path']) for i in to_indices]
-    confirm = messagebox.askyesno(
-        "Confirmar Cópia",
-        f"Copiar {len(selected_tags)} dado(s) EXIF de:\n"
-        f"  {os.path.basename(from_path)} (Origem)\n\n"
-        f"Para:\n" + "\n".join(f"  {name} (Destino)" for name in to_names) + "\n\n"
-        "Os dados EXIF existentes nas imagens de destino serão preservados,\n"
-        "apenas os dados selecionados serão atualizados.\n\n"
-        "Continuar?",
-    )
-    if not confirm:
-        return
 
-    try:
-        import piexif
+def execute_planned_exif_transfers(compare_state, progress_callback=None):
+    """
+    Executa o plano de transferência configurado no compare_state.
+    
+    Args:
+        compare_state (ExifCompareState): Estado configurado na tabela.
+        progress_callback: Função opcional progress_callback(current, total, status_message)
 
-        with Image.open(from_path) as image:
-            exif_bytes = image.info.get('exif')
-            if not exif_bytes:
-                messagebox.showerror("Erro", "Imagem de origem não possui dados EXIF.")
-                return
-            from_exif_dict = piexif.load(exif_bytes)
-    except Exception as error:
-        messagebox.showerror("Erro", f"Erro ao ler EXIF da imagem de origem:\n{error}")
-        return
+    Returns:
+        dict: {
+            "success": bool,
+            "transferred_count": int,
+            "modified_destinations": list of str (nomes dos arquivos alterados),
+            "errors": list of str,
+            "warnings": list of str
+        }
+    """
+    import piexif
 
-    tag_to_ifd = {}
-    for ifd_name in ["0th", "Exif", "GPS", "Interop", "1st"]:
-        for tag_id, value in from_exif_dict.get(ifd_name, {}).items():
-            tag_name = ExifTags.TAGS.get(tag_id, tag_id)
-            tag_to_ifd[tag_name] = (ifd_name, tag_id, value)
+    # 1. Monta o mapa de operações agrupado por destino:
+    # { dest_key: { (ifd_name, tag_id): (source_key, raw_value, tag_name) } }
+    dest_operations = {k: {} for k in compare_state.keys}
+    total_ops = 0
 
-    success_count = 0
-    for to_idx in to_indices:
-        to_path = viewer_data[to_idx]['file_path']
+    # Carrega os raw EXIF dicts de todas as imagens de origem necessárias
+    loaded_raw_exif = {}  # { key: piexif_dict }
+    for key, card in compare_state.card_infos.items():
+        if card.file_path and os.path.exists(card.file_path):
+            try:
+                with Image.open(card.file_path) as img:
+                    exif_bytes = img.info.get('exif')
+                    if exif_bytes:
+                        loaded_raw_exif[key] = piexif.load(exif_bytes)
+                    else:
+                        loaded_raw_exif[key] = {
+                            "0th": {}, "Exif": {}, "GPS": {},
+                            "Interop": {}, "1st": {}, "thumbnail": None,
+                        }
+            except Exception as e:
+                loaded_raw_exif[key] = {
+                    "0th": {}, "Exif": {}, "GPS": {},
+                    "Interop": {}, "1st": {}, "thumbnail": None,
+                }
+
+    # Prepara o catálogo de mapeamento tag_name -> (ifd_name, tag_id) por chave
+    tag_catalog = {}  # { key: { tag_name: (ifd_name, tag_id, value) } }
+    for key, exif_dict in loaded_raw_exif.items():
+        tag_catalog[key] = {}
+        for ifd_name in ["0th", "Exif", "GPS", "Interop", "1st"]:
+            for tag_id, val in exif_dict.get(ifd_name, {}).items():
+                tag_name = ExifTags.TAGS.get(tag_id, str(tag_id))
+                tag_catalog[key][tag_name] = (ifd_name, tag_id, val)
+
+    # Identifica as transferências selecionadas
+    for tag_name, row in compare_state.row_states.items():
+        if not row.selected or not row.source or not row.destinations:
+            continue
+        src_key = row.source
+        if src_key not in tag_catalog or tag_name not in tag_catalog[src_key]:
+            continue
+
+        ifd_name, tag_id, raw_val = tag_catalog[src_key][tag_name]
+        for dest_key in row.destinations:
+            if dest_key == src_key:
+                continue
+            dest_operations[dest_key][(ifd_name, tag_id)] = (src_key, raw_val, tag_name)
+            total_ops += 1
+
+    if total_ops == 0:
+        return {
+            "success": False,
+            "transferred_count": 0,
+            "modified_destinations": [],
+            "errors": ["Nenhuma transferência válida selecionada."],
+            "warnings": []
+        }
+
+    # 2. Valida compatibilidade de todos os arquivos de destino que receberão alterações
+    errors = []
+    warnings = []
+    destinations_to_modify = [k for k, ops in dest_operations.items() if ops]
+
+    for dest_key in destinations_to_modify:
+        card = compare_state.card_infos[dest_key]
+        writable, reason = check_file_exif_writable(card.file_path)
+        if not writable:
+            errors.append(f"Imagem {dest_key} ({card.file_name}): {reason}")
+
+    if errors:
+        return {
+            "success": False,
+            "transferred_count": 0,
+            "modified_destinations": [],
+            "errors": errors,
+            "warnings": warnings
+        }
+
+    # 3. Executa a aplicação das tags e gravação dos arquivos com backup de segurança
+    modified_files = []
+    completed_ops = 0
+
+    for dest_key in destinations_to_modify:
+        card = compare_state.card_infos[dest_key]
+        dest_path = card.file_path
+        ops_dict = dest_operations[dest_key]
+
+        if progress_callback:
+            progress_callback(completed_ops, total_ops, f"Atualizando Imagem {dest_key} ({card.file_name})...")
+
+        # Cria backup temporário antes de gravar
+        backup_path = dest_path + ".pc_backup"
         try:
-            with Image.open(to_path) as image:
-                exif_bytes = image.info.get('exif')
+            shutil.copy2(dest_path, backup_path)
+        except Exception as e:
+            errors.append(f"Não foi possível criar cópia de segurança para {card.file_name}: {e}")
+            continue
+
+        try:
+            with Image.open(dest_path) as img:
+                exif_bytes = img.info.get('exif')
                 if exif_bytes:
                     to_exif_dict = piexif.load(exif_bytes)
                 else:
@@ -79,29 +163,42 @@ def copy_selected_exif_data(parent, popup, viewer_data):
                         "Interop": {}, "1st": {}, "thumbnail": None,
                     }
 
-                copied = 0
-                for tag in selected_tags:
-                    if tag in tag_to_ifd:
-                        ifd_name, tag_id, value = tag_to_ifd[tag]
-                        to_exif_dict[ifd_name][tag_id] = value
-                        copied += 1
+                # Aplica as tags transferidas
+                for (ifd_name, tag_id), (src_key, raw_val, tag_name) in ops_dict.items():
+                    if ifd_name not in to_exif_dict:
+                        to_exif_dict[ifd_name] = {}
+                    to_exif_dict[ifd_name][tag_id] = raw_val
+                    completed_ops += 1
 
-                if copied > 0:
-                    image.save(to_path, exif=piexif.dump(to_exif_dict))
-                    success_count += 1
-        except Exception as error:
-            messagebox.showerror(
-                "Erro",
-                f"Erro ao salvar EXIF em {os.path.basename(to_path)}:\n{error}",
-            )
-            return
+                new_exif_bytes = piexif.dump(to_exif_dict)
+                img.save(dest_path, exif=new_exif_bytes)
 
-    if success_count > 0:
-        messagebox.showinfo(
-            "Sucesso",
-            f"Dados EXIF copiados com sucesso!\n"
-            f"{len(selected_tags)} tag(s) copiada(s) para {success_count} imagem(ns).",
-        )
-        popup.destroy()
-    else:
-        messagebox.showwarning("Aviso", "Nenhum dado foi copiado.")
+            # Gravação bem-sucedida: remove o backup temporário
+            if os.path.exists(backup_path):
+                os.remove(backup_path)
+
+            modified_files.append(card.file_name)
+
+            # Atualiza os dados carregados em memória no card do viewer
+            card._load_details()
+
+        except Exception as e:
+            # Em caso de falha, restaura o backup imediatamente
+            if os.path.exists(backup_path):
+                try:
+                    shutil.copy2(backup_path, dest_path)
+                    os.remove(backup_path)
+                except Exception:
+                    pass
+            errors.append(f"Falha ao salvar EXIF em {card.file_name}: {e}")
+
+    if progress_callback:
+        progress_callback(total_ops, total_ops, "Operação concluída.")
+
+    return {
+        "success": len(modified_files) > 0 and len(errors) == 0,
+        "transferred_count": completed_ops,
+        "modified_destinations": modified_files,
+        "errors": errors,
+        "warnings": warnings
+    }

@@ -281,41 +281,11 @@ class ImageViewer(ctk.CTkFrame):
 
     def fit_to_window(self):
         """Ajusta a imagem para caber inteiramente dentro do canvas."""
-        if not self.pil_image:
-            return
-
-        cw = self.canvas.winfo_width()
-        ch = self.canvas.winfo_height()
-
-        if cw <= 10 or ch <= 10:
-            self.after(50, self.fit_to_window)
-            return
-
-        iw, ih = self.orig_size
-        padding = 0.96
-        scale_w = (cw * padding) / iw
-        scale_h = (ch * padding) / ih
-        self.scale = min(scale_w, scale_h)
-
-        self.offset_x = (cw - iw * self.scale) / 2.0
-        self.offset_y = (ch - ih * self.scale) / 2.0
-
-        self.render()
+        self.interaction.fit_to_window()
 
     def reset_100(self):
         """Redefine o zoom para 100% (1:1), centralizando a imagem."""
-        if not self.pil_image:
-            return
-
-        cw = self.canvas.winfo_width()
-        ch = self.canvas.winfo_height()
-        iw, ih = self.orig_size
-
-        self.scale = 1.0
-        self.offset_x = (cw - iw) / 2.0
-        self.offset_y = (ch - ih) / 2.0
-
-        self.render()
+        self.interaction.reset_100()
 
     def rotate_90(self):
         """Gira a imagem 90° no sentido horário, mantendo o centro da visualização."""

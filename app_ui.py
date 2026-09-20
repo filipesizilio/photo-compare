@@ -30,61 +30,11 @@ from app_config import (
     COLOR_SYNC_LOCKED_HOVER,
     COLOR_SYNC_UNLOCKED_FG,
     COLOR_SYNC_UNLOCKED_HOVER,
+    save_appearance_mode,
+    get_initial_appearance_mode,
 )
 
-
-def add_tooltip(widget, text, delay=400):
-    """Helper de tooltip com delay e descarte automático ao sair ou clicar."""
-    tip = {"win": None, "after_id": None}
-
-    def show(_event=None):
-        def _create():
-            try:
-                win = tk.Toplevel(widget)
-                win.overrideredirect(True)
-                win.attributes("-topmost", True)
-                label = tk.Label(
-                    win, text=text, background="#2b2b2b", foreground="white",
-                    padx=8, pady=4, borderwidth=0, font=("Segoe UI", 9)
-                )
-                label.pack()
-                x = widget.winfo_rootx() + 10
-                y = widget.winfo_rooty() + widget.winfo_height() + 6
-                win.geometry(f"+{x}+{y}")
-                tip["win"] = win
-            except Exception:
-                pass
-        tip["after_id"] = widget.after(delay, _create)
-
-    def hide(_event=None):
-        if tip["after_id"]:
-            try:
-                widget.after_cancel(tip["after_id"])
-            except Exception:
-                pass
-            tip["after_id"] = None
-        if tip["win"]:
-            try:
-                tip["win"].destroy()
-            except Exception:
-                pass
-            tip["win"] = None
-
-    try:
-        widget.bind("<Enter>", show)
-        widget.bind("<Leave>", hide)
-        widget.bind("<Button-1>", hide)
-    except NotImplementedError:
-        # Widgets compostos do CustomTkinter (como CTkSegmentedButton) não implementam bind() no container
-        # Vincula nos botões internos se disponíveis
-        buttons = getattr(widget, "_buttons_dict", {}).values()
-        for btn in buttons:
-            try:
-                btn.bind("<Enter>", show)
-                btn.bind("<Leave>", hide)
-                btn.bind("<Button-1>", hide)
-            except Exception:
-                pass
+from ui_tooltip import add_tooltip
 
 
 class AppUI:
@@ -230,35 +180,34 @@ class AppUI:
         # Botão Comparar EXIF (ícone ℹ de informação/metadados)
         self.btn_exif_compare = ctk.CTkButton(
             self.toolbar,
-            text="ℹ",
+            text="exif",
             width=38,
             height=34,
             corner_radius=CORNER_RADIUS,
-            font=ctk.CTkFont(family="Segoe UI Symbol", size=16, weight="bold"),
-            fg_color=COLOR_PRIMARY,
-            hover_color=COLOR_PRIMARY_HOVER,
-            text_color=COLOR_PRIMARY_TEXT,
+            font=ctk.CTkFont(family="Segoe UI Symbol", size=14, weight="normal"),
+            fg_color=COLOR_TRANSPARENT,
+            hover_color=COLOR_HOVER_MUTED,
+            text_color=COLOR_TEXT_MAIN,
             command=self.callbacks['show_exif_comparison']
         )
         self.btn_exif_compare.pack(side=tk.LEFT, padx=3)
         add_tooltip(self.btn_exif_compare, "Metadados e comparação EXIF")
 
-        # Botão de alternância de tema (Sol/Lua)
-        is_dark_boot = (ctk.get_appearance_mode() == "Dark")
-        self.btn_theme = ctk.CTkButton(
+        # Segmented control de tema (Sol / Lua / Computador)
+        self.seg_theme = ctk.CTkSegmentedButton(
             self.toolbar,
-            text="☀" if is_dark_boot else "🌙",
-            width=38,
-            height=34,
+            values=["☀", "🌙", "💻"],
+            command=self._on_theme_mode_change,
             corner_radius=CORNER_RADIUS,
-            font=ctk.CTkFont(size=15),
-            fg_color=COLOR_TRANSPARENT,
-            hover_color=COLOR_HOVER_MUTED,
-            text_color=COLOR_TEXT_MAIN,
-            command=self._toggle_theme
+            width=108,
+            height=32,
+            font=ctk.CTkFont(size=13),
         )
-        self.btn_theme.pack(side=tk.RIGHT, padx=(0, 10))
-        add_tooltip(self.btn_theme, "Alternar tema claro/escuro")
+        active_mode = get_initial_appearance_mode()
+        self.seg_theme.set({"light": "☀", "dark": "🌙", "system": "💻"}.get(active_mode, "💻"))
+        self.seg_theme.pack(side=tk.RIGHT, padx=(0, 10))
+        add_tooltip(self.seg_theme, "Modo de aparência: Claro (☀), Escuro (🌙) ou Sistema (💻)")
+        self.btn_theme = self.seg_theme
 
         # 2. Barra de status inferior
         self.statusbar = ctk.CTkFrame(
@@ -287,12 +236,18 @@ class AppUI:
             cursor="hand2"
         )
         self.lbl_github.pack(side=tk.RIGHT, padx=(0, 12))
-        self.lbl_github.bind(
-            "<Button-1>",
-            lambda e: self.callbacks['open_github']
-        )
+        def _on_github_click(_event=None):
+            if 'open_github' in self.callbacks:
+                self.callbacks['open_github']()
+
+        self.lbl_github.bind("<Button-1>", _on_github_click)
+        try:
+            tk.Frame.bind(self.lbl_github, "<Button-1>", _on_github_click)
+        except Exception:
+            pass
         self.lbl_github.bind("<Enter>", lambda e: self.lbl_github.configure(text_color=COLOR_LINK_HOVER))
         self.lbl_github.bind("<Leave>", lambda e: self.lbl_github.configure(text_color=COLOR_LINK_TEXT))
+        add_tooltip(self.lbl_github, "Abrir repositório no GitHub")
 
         self._update_sync_button_style()
 
@@ -309,45 +264,35 @@ class AppUI:
 
     def _arrange_columns(self):
         """Organiza as colunas em grid proporcional de acordo com a visibilidade."""
-        # Limpa layout anterior
-        self.callbacks['viewer1'].grid_forget()
-        self.callbacks['viewer2'].grid_forget()
-        self.callbacks['viewer3'].grid_forget()
-
-        # Reseta configuração de colunas para evitar resíduos de uniform group
+        # Limpa layout anterior e reseta colunas
+        for key in ('viewer1', 'viewer2', 'viewer3'):
+            self.callbacks[key].grid_forget()
         for i in range(3):
             self.columns_container.columnconfigure(i, weight=0, uniform="")
 
-        if not self.third_column_visible:
-            # Apenas 2 colunas: dividem o espaço 50/50
-            self.columns_container.columnconfigure(0, weight=1, uniform="cols2")
-            self.columns_container.columnconfigure(1, weight=1, uniform="cols2")
-            # Coluna 2 fica com weight=0 e sem uniform group
-            self.columns_container.columnconfigure(2, weight=0, uniform="")
+        active_keys = ('viewer1', 'viewer2', 'viewer3') if self.third_column_visible else ('viewer1', 'viewer2')
+        group = f"cols{len(active_keys)}"
+        for i, v_key in enumerate(active_keys):
+            self.columns_container.columnconfigure(i, weight=1, uniform=group)
+            self.callbacks[v_key].grid(row=0, column=i, sticky="nsew", padx=2, pady=2)
 
-            self.callbacks['viewer1'].grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
-            self.callbacks['viewer2'].grid(row=0, column=1, sticky="nsew", padx=2, pady=2)
-        else:
-            # 3 colunas: dividem o espaço 33/33/33
-            self.columns_container.columnconfigure(0, weight=1, uniform="cols3")
-            self.columns_container.columnconfigure(1, weight=1, uniform="cols3")
-            self.columns_container.columnconfigure(2, weight=1, uniform="cols3")
-
-            self.callbacks['viewer1'].grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
-            self.callbacks['viewer2'].grid(row=0, column=1, sticky="nsew", padx=2, pady=2)
-            self.callbacks['viewer3'].grid(row=0, column=2, sticky="nsew", padx=2, pady=2)
-
-    def _toggle_theme(self):
-        """Alterna entre os modos claro e escuro dinamicamente."""
-        escuro = (ctk.get_appearance_mode() == "Dark")
-        novo = "light" if escuro else "dark"
-        ctk.set_appearance_mode(novo)
-        if hasattr(self, "btn_theme"):
-            self.btn_theme.configure(text="🌙" if novo == "light" else "☀")
+    def _on_theme_mode_change(self, valor):
+        """Altera o modo de aparência para Claro, Escuro ou Sistema."""
+        novo_modo = {"☀": "light", "🌙": "dark", "💻": "system"}.get(valor, "system")
+        ctk.set_appearance_mode(novo_modo)
+        save_appearance_mode(novo_modo)
         for key in ('viewer1', 'viewer2', 'viewer3'):
             viewer = self.callbacks.get(key)
             if viewer and hasattr(viewer, "update_appearance_mode"):
                 viewer.update_appearance_mode()
+
+    def _toggle_theme(self):
+        """Alterna ciclicamente entre os modos Claro, Escuro e Sistema."""
+        curr = self.seg_theme.get() if hasattr(self, "seg_theme") else "💻"
+        nxt = {"☀": "🌙", "🌙": "💻", "💻": "☀"}.get(curr, "☀")
+        if hasattr(self, "seg_theme"):
+            self.seg_theme.set(nxt)
+        self._on_theme_mode_change(nxt)
 
     def _on_qtd_imagens_change(self, valor):
         """Roteia alteração do segmented control para toggle_third_column evitando loops."""

@@ -2,7 +2,7 @@
 
 # Definimos as variáveis de identificação do projeto aqui
 NOME_PROJETO = "PhotoCompare"
-VERSAO_PROJETO = "1.1.0"
+VERSAO_PROJETO = "1.2.0"
 
 # Combinamos o nome e a versão para formar o nome final do executável
 NOME_EXECUTAVEL = f"{NOME_PROJETO}_v{VERSAO_PROJETO}"
@@ -17,7 +17,7 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[('assets', 'assets'), ('themes', 'themes')] + ctk_datas + tkdnd_datas,
-    hiddenimports=['tkinterdnd2', 'customtkinter', 'darkdetect'],
+    hiddenimports=['tkinterdnd2', 'customtkinter', 'darkdetect', 'piexif'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

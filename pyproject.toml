@@ -1,5 +1,6 @@
 [tool.pylint.main]
 disable = ["all"]
+ignore-paths = ["^\\.venv/.*$", "^build/.*$", "^dist/.*$", "^bkp/.*$", "^exemplos/.*$"]
 
 [tool.pylint."messages control"]
 enable = ["C0302"]
