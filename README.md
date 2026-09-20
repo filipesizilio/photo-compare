@@ -54,10 +54,10 @@ A janela de metadados foi completamente reformulada para oferecer uma experiênc
   ┌──────────────┬────────────┬──────────────┬──────────────┬──────────────┐
   │ CAMPO EXIF   │ COPIAR DE  │ IMAGEM A     │ IMAGEM B     │ IMAGEM C     │
   ├──────────────┼────────────┼──────────────┼──────────────┼──────────────┤
-  │ Make         │ [ A ▼ ]    │ ☑ Sony       │ ☑ Sony       │ ☑ Canon      │
-  │ Model        │ [ A ▼ ]    │ ☑ ILCE-7M4   │ ☑ ILCE-7M4   │ ☑ EOS R5     │
-  │ FNumber      │ [ B ▼ ]    │ ☑ 2.8        │ ☑ 2.8        │ ☑ 4.0        │
-  │ ISO          │ [ — ▼ ]    │ ☐ 100        │ ☐ 200        │ ☐ 400        │
+  │ Make         │ [ A ▼ ]    │ ☑ Sony       │ ☑ Sony      │ ☑ Canon      │
+  │ Model        │ [ A ▼ ]    │ ☑ ILCE-7M4   │ ☑ ILCE-7M4  │ ☑ EOS R5     │
+  │ FNumber      │ [ B ▼ ]    │ ☑ 2.8        │ ☑ 2.8       │ ☑ 4.0        │
+  │ ISO          │ [ — ▼ ]    │ ☐ 100        │ ☐ 200       │ ☐ 400        │
   └──────────────┴────────────┴──────────────┴──────────────┴──────────────┘
   ```
 - **Cards Superiores das Imagens**:
