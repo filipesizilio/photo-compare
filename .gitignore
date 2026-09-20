@@ -6,5 +6,4 @@ exemplos/
 dist/
 bkp/
 docs/
-build.py
 pyproject.toml
